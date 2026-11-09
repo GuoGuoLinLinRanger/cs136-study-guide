@@ -1073,6 +1073,159 @@ test.expect:  4
     <tr><td>regression testing</td><td>re-running all old tests after a change, to catch code that "regressed" (broke)</td></tr>
   </table></div></div>
 
+  <h3 id="c2-harness">2.6 How to write a testing harness, for any function</h3>
+  <p>A harness question gives you a function (or asks you to write one first) and says: "write a program that reads ... from input and prints ... for each". The function changes from exam to exam; the harness is always the same five decisions. Make them in this order and the code writes itself.</p>
+  <div class="card def"><span class="tag">The harness recipe</span>
+  <ol class="steps">
+    <li><b>Decide what one test case looks like in the input.</b> One case per call of the function, its arguments in order, separated by whitespace: <code>7</code> for <code>square(7)</code>, <code>3 4</code> for <code>my_max(3, 4)</code>, <code>3 10 20 30</code> for an array (length first, then the elements), <code>s 7</code> when a command letter chooses the function.</li>
+    <li><b>Decide what one case prints.</b> Exactly the result and a newline: <code>printf("%d\n", f(x))</code>. A <code>bool</code> prints as <code>1</code> or <code>0</code> with <code>%d</code> unless the question asks for words. A function that returns nothing but mutates through pointers or an array: print the mutated values after the call. A function that itself prints: just call it; print nothing else. Never print prompts, labels or the inputs back: they go to stdout and break the expect file.</li>
+    <li><b>Define every variable the call needs before the loop</b>, initialized: <code>int a = 0; int b = 0;</code> Output variables for pointer parameters: <code>int q = 0; int r = 0;</code> Arrays: a fixed buffer with a literal size, <code>int a[100];</code> plus <code>int n = 0;</code>.</li>
+    <li><b>Read one whole case per iteration, and stop when any read fails.</b> One <code>%d</code> per value, each checked: <code>while (scanf("%d", &amp;a) == 1 &amp;&amp; scanf("%d", &amp;b) == 1)</code>. For a character use <code>" %c"</code> with the leading space; for a word <code>"%80s"</code> into <code>char w[81]</code>. An array is read with an inner loop after its length.</li>
+    <li><b>Call the function and print.</b> Then document: purpose "<code>name() reads ... from input and prints ... for each</code>", <code>effects: reads input, produces output</code>, return type <code>void</code> (or make <code>main</code> the harness), no <code>requires:</code> line unless the input format imposes one (then assert it). Finally write the <code>.in</code>/<code>.expect</code> pair by hand from the question's examples plus edge cases.</li>
+  </ol></div>
+
+  <div class="card formula"><span class="tag">Nine function shapes, one table</span>
+  <div class="tbl-wrap"><table>
+    <tr><th>Function under test</th><th>One input case</th><th>Reading condition</th><th>What the body prints</th></tr>
+    <tr><td><code>int square(int x)</code></td><td><code>7</code></td><td><code>scanf("%d", &amp;x) == 1</code></td><td><code>printf("%d\n", square(x));</code></td></tr>
+    <tr><td><code>int my_max(int a, int b)</code></td><td><code>3 4</code></td><td><code>scanf("%d", &amp;a) == 1 &amp;&amp; scanf("%d", &amp;b) == 1</code></td><td><code>printf("%d\n", my_max(a, b));</code></td></tr>
+    <tr><td><code>bool is_even(int x)</code></td><td><code>7</code></td><td>as for one int</td><td><code>printf("%d\n", is_even(x));</code> prints <code>0</code>; words only if asked: <code>if (is_even(x)) { printf("true\n"); } else { printf("false\n"); }</code></td></tr>
+    <tr><td><code>int letter_score(char c)</code></td><td><code>a</code></td><td><code>scanf(" %c", &amp;c) == 1</code> (the space skips newlines and blanks)</td><td><code>printf("%d\n", letter_score(c));</code></td></tr>
+    <tr><td><code>int count_vowels(const char *s)</code></td><td><code>banana</code></td><td><code>char w[81]; ... scanf("%80s", w) == 1</code> (no <code>&amp;</code>: an array is already an address)</td><td><code>printf("%d\n", count_vowels(w));</code></td></tr>
+    <tr><td><code>void divide(int a, int b, int *q, int *r)</code></td><td><code>17 5</code></td><td>two ints as above</td><td><code>int q = 0; int r = 0; divide(a, b, &amp;q, &amp;r); printf("%d %d\n", q, r);</code></td></tr>
+    <tr><td><code>void negate_all(int a[], int len)</code></td><td><code>3 10 20 30</code></td><td>read <code>n</code>, then <code>for (int i = 0; i &lt; n; ++i) { scanf("%d", &amp;a[i]); }</code></td><td>call, then print the <code>n</code> elements separated by single spaces and end the line</td></tr>
+    <tr><td><code>int sum(const int a[], int len)</code></td><td><code>3 1 2 3</code></td><td>same array reading</td><td><code>printf("%d\n", sum(a, n));</code></td></tr>
+    <tr><td>two functions, a command picks one</td><td><code>s 7</code> or <code>d 12 4</code></td><td><code>scanf(" %c", &amp;op) == 1</code>, then read the arguments that command needs</td><td><code>if (op == 's') { ... } else if (op == 'd') { ... }</code>; an unknown command ends the harness</td></tr>
+  </table></div></div>
+
+  <div class="callout example"><span class="tag">Worked example A — two arguments and a bool result</span>
+  You are given <code>bool is_divisible(int a, int b)</code>, which returns true when <code>b</code> divides <code>a</code> exactly (requires <code>b != 0</code>). Write a harness that reads pairs and prints <code>1</code> or <code>0</code> for each pair on its own line. Decisions: a case is <code>a b</code>; a case prints <code>%d</code> of the bool; two ints to define; read both, checked; print.
+<pre class="code"><code class="language-c">#include "cs136.h"
+
+// is_divisible(a, b) returns true if b divides a exactly, and false otherwise
+// requires: b != 0
+bool is_divisible(int a, int b) {
+  assert(b != 0);
+  return a % b == 0;
+}
+
+// test_is_divisible() reads pairs of ints a b from input until no more can
+//   be read and prints is_divisible(a, b) for each pair as 1 or 0 on its own line
+// effects: reads input, produces output
+void test_is_divisible(void) {
+  int a = 0;
+  int b = 0;
+  while (scanf("%d", &amp;a) == 1 &amp;&amp; scanf("%d", &amp;b) == 1) {
+    printf("%d\n", is_divisible(a, b));
+  }
+}
+
+int main(void) {
+  test_is_divisible();
+}</code></pre>
+<pre class="mem">div.in:      12 4        div.expect:  1
+             7 2                      0
+             0 5                      1
+             -9 3                     1</pre>
+  Notes. The harness does not check <code>b != 0</code>: the <code>.in</code> file must respect the function's requirements, exactly as an <code>assert</code> test would. <code>&amp;&amp;</code> short-circuits, so an input with an odd number of values stops cleanly after the last complete pair. If the question instead wanted the words <code>true</code>/<code>false</code>, the body becomes an <code>if</code>/<code>else</code> with two <code>printf</code>s; <code>%d</code> of a <code>bool</code> is never a compile error, it is simply 1 or 0.</div>
+
+  <div class="callout example"><span class="tag">Worked example B — a function that mutates an array</span>
+  You are given <code>void negate_all(int a[], int len)</code>, which replaces every element by its negative. Write a harness where each test case is a length <code>n</code> (at most 100) followed by <code>n</code> integers, and which prints the array after the call, elements separated by one space, one case per line. Decisions: a case is <code>n e1 ... en</code>; a case prints the mutated elements; a fixed buffer plus <code>n</code>; read <code>n</code> then an inner loop; call; print with the space <em>before</em> every element except the first, so there is no trailing space.
+<pre class="code"><code class="language-c">#include "cs136.h"
+
+// negate_all(a, len) replaces each of the first len elements of a by its negative
+// requires: a has at least len elements [not asserted]
+//           len &gt;= 0
+// effects: modifies a
+void negate_all(int a[], int len) {
+  assert(len &gt;= 0);
+  for (int i = 0; i &lt; len; ++i) {
+    a[i] = -a[i];
+  }
+}
+
+// test_negate_all() reads test cases from input, each a length n (0 to 100)
+//   followed by n ints, and prints the n ints after negate_all has been
+//   applied, separated by spaces, one case per line
+// requires: every length read is between 0 and 100
+// effects: reads input, produces output
+void test_negate_all(void) {
+  int a[100] = {0};
+  int n = 0;
+  while (scanf("%d", &amp;n) == 1) {
+    assert(n &gt;= 0);
+    assert(n &lt;= 100);
+    for (int i = 0; i &lt; n; ++i) {
+      scanf("%d", &amp;a[i]);
+    }
+    negate_all(a, n);
+    for (int i = 0; i &lt; n; ++i) {
+      if (i &gt; 0) {
+        printf(" ");
+      }
+      printf("%d", a[i]);
+    }
+    printf("\n");
+  }
+}
+
+int main(void) {
+  test_negate_all();
+}</code></pre>
+<pre class="mem">neg.in:      3 10 -20 30        neg.expect:  -10 20 -30
+             1 0                             0
+             0                               (an empty line)</pre>
+  Notes. The buffer is <code>int a[100]</code> with a literal size (no VLA), and the length limit becomes a documented, asserted requirement of the harness. Inside the element loop the <code>scanf</code> result is not checked because the input format promises <code>n</code> values; checking it is also fine. <code>&amp;a[i]</code> is the address of one element. The case with <code>n = 0</code> prints just a newline: the expect file has an empty line there. A <code>void</code> function cannot be tested with <code>assert(negate_all(...) == ...)</code>; printing the array afterwards is how you observe it.</div>
+
+  <div class="callout example"><span class="tag">Worked example C — a command decides which function runs</span>
+  Test <code>square</code> and <code>is_divisible</code> from one harness: a case is <code>s x</code> (print <code>square(x)</code>) or <code>d a b</code> (print <code>is_divisible(a, b)</code> as 1 or 0). Anything else ends the harness. This is the course notes' "read a symbol first" harness with <code>scanf</code> instead of <code>read_symbol</code>.
+<pre class="code"><code class="language-c">// test_both() reads commands from input until none remain or an unknown
+//   command appears: "s x" prints square(x), "d a b" prints
+//   is_divisible(a, b) as 1 or 0, each on its own line
+// effects: reads input, produces output
+void test_both(void) {
+  char op = ' ';
+  int a = 0;
+  int b = 0;
+  while (scanf(" %c", &amp;op) == 1) {
+    if (op == 's') {
+      if (scanf("%d", &amp;a) != 1) {
+        return;
+      }
+      printf("%d\n", square(a));
+    } else if (op == 'd') {
+      if (scanf("%d", &amp;a) != 1 || scanf("%d", &amp;b) != 1) {
+        return;
+      }
+      printf("%d\n", is_divisible(a, b));
+    } else {
+      return;
+    }
+  }
+}</code></pre>
+<pre class="mem">both.in:     s 7            both.expect:  49
+             d 12 4                       1
+             d 7 2                        0
+             s -3                         9
+             q                            (nothing more)</pre>
+  Notes. <code>" %c"</code> (with the space) skips the newline left after the previous number; without it every second command read would be <code>'\n'</code> and fall into the <code>else</code>. Each command reads only the arguments it needs, so a missing argument is caught by its own check. In a <code>void</code> harness, <code>return;</code> is the clean way to stop early. The order of <code>if</code>s does not matter; a final <code>else</code> that stops is what makes the harness robust to a bad line.</div>
+
+  <div class="callout pitfall"><span class="tag">Watch out — the ten ways a harness loses marks</span>
+  <ol>
+    <li><code>while (scanf("%d", &amp;x) != EOF)</code>: a non-number makes <code>scanf</code> return 0 forever, so the loop never ends. Compare with <code>== 1</code>.</li>
+    <li><code>scanf("%d", x)</code> without <code>&amp;</code> (for an array element it is <code>&amp;a[i]</code>; for a whole string buffer there is no <code>&amp;</code>).</li>
+    <li><code>scanf("%d %d", &amp;a, &amp;b) == 1</code>: one call with two conversions returns 2 on success. Either compare with 2 or use two calls joined by <code>&amp;&amp;</code>.</li>
+    <li><code>scanf("%c", &amp;c)</code> without the leading space, which reads the blank between values.</li>
+    <li>Printing anything but the results: prompts, <code>"answer = "</code>, the inputs echoed back, a trailing space, a missing <code>\n</code>.</li>
+    <li>Printing once after the loop instead of once per case, or printing the last value only.</li>
+    <li>Output variables for pointer parameters not defined before the call (the Quiz 3 <code>min_max</code> slip), or passed without <code>&amp;</code>.</li>
+    <li>Declaring the harness <code>int</code>, ending it with <code>return;</code>, documenting it as "tests f", or adding a <code>requires:</code> that nothing enforces.</li>
+    <li>Using <code>assert</code> on the function's result inside a harness: a harness prints so that the <code>.expect</code> file does the checking. (Asserting the input-format requirement, such as <code>n &lt;= 100</code>, is fine.)</li>
+    <li>Calling the cs136 module's <code>read_int</code> on the exam: it is forbidden there; use <code>scanf</code>.</li>
+  </ol></div>
+
+  <div class="callout intuition"><span class="tag">Understand it this way</span> A harness is a translator between two languages: the <code>.in</code> file speaks "argument values, one case per line" and the function speaks C. The loop reads one sentence of the file, says it to the function, and writes the function's answer down in the <code>.expect</code> language, one line per answer. Once you see the three parts (read a case, call, print a line), the only thing that changes between questions is how many values a case has and what type they are.</div>
+
   <div class="remember"><span class="tag">★ Must remember — Chapter 2</span>
   <ul>
     <li><b>Side effects in CS 136:</b> output, input, mutating a global, mutating through a pointer. Mutating a local or a parameter is <b>not</b> a side effect. <code>assert</code> and tracing are not side effects.</li>
@@ -1090,9 +1243,10 @@ test.expect:  4
     <li><code>scanf("%d", &amp;x)</code>: one value, skips leading whitespace, returns 1 (success), 0 (not an int, input not consumed) or <code>EOF</code> (end of input). Always check it. Base case of a recursive reader: scanf did not return 1. Harness loop: <code>while (scanf("%d", &amp;x) == 1)</code>.</li>
     <li>Invalid input is never skipped: <code>4 23skidoo 57</code> reads 4, then 23, then fails forever.</li>
     <li>Tests: asserts for return values, <code>.in</code>/<code>.expect</code> for I/O, exact match including the last newline. Vocabulary: assertion, I/O-driven, harness, white/black box, unit, regression.</li>
+    <li><b>Harness recipe:</b> decide what one input case is and what one line of output is; define every variable before the loop; read one whole case per iteration with every read checked (<code>== 1</code>, joined by <code>&amp;&amp;</code>; <code>" %c"</code> for a char; length then elements for an array); call; print the result and a newline, nothing else. <code>void</code>, purpose "reads ... and prints ...", <code>effects: reads input, produces output</code>.</li>
   </ul></div>
 
-  <h3>Quiz — Chapter 2 <span style="font-size:.9rem;color:var(--fg-soft)">(40 questions)</span></h3>
+  <h3>Quiz — Chapter 2 <span style="font-size:.9rem;color:var(--fg-soft)">(46 questions)</span></h3>
   <div class="quiz-head"><span style="color:var(--fg-soft);font-size:.9rem">Multiple choice: click an option. Short answer: write your answer on paper first, then reveal and mark yourself.</span><span class="score" id="score-ch2">0 / 0</span></div>
   <div id="quiz-ch2"></div>
 
@@ -2795,7 +2949,7 @@ void aos_function(char *aos[], int len) {   // pass the length, as with every ar
     <li>Read <b>one value per call</b>: <code>scanf("%d", &amp;x)</code>. The <code>&amp;x</code> passes the address of <code>x</code> so <code>scanf</code> can mutate it (emulated pass by reference).</li>
     <li>Return value: the <b>count</b> of values read (1 on success), <b>0</b> if the next token is not the right type (<code>hello</code> for <code>%d</code>), <b><code>EOF</code></b> (defined as -1, always write <code>EOF</code>) when the input is exhausted. <b>Always check it.</b></li>
     <li><code>%d</code> skips leading whitespace and newlines. It never skips bad input: for <code>4 23skidoo 57</code> you read 4, then 23, then fail forever.</li>
-    <li>Harness pattern: <code>int x = 0; while (scanf("%d", &amp;x) == 1) { printf("%d\n", f(x)); }</code></li>
+    <li>Harness pattern: <code>int x = 0; while (scanf("%d", &amp;x) == 1) { printf("%d\n", f(x)); }</code>. Two arguments: <code>while (scanf("%d", &amp;a) == 1 &amp;&amp; scanf("%d", &amp;b) == 1)</code>. A char: <code>scanf(" %c", &amp;c)</code>. An array: read <code>n</code>, then <code>n</code> values into a fixed buffer. Pointer outputs: define them first, call with <code>&amp;</code>, print them. Recipe and worked shapes in Chapter 2, section 2.6.</li>
     <li><code>printf</code> returns the number of characters printed: <code>printf("hello!\n")</code> returns 7.</li>
     <li>Tracing tools (<code>trace_int</code> ...) print to stderr and are not tested; <code>printf</code> prints to stdout, which the <code>.expect</code> file must match exactly, including the final newline.</li>
   </ul></div>
@@ -3804,7 +3958,32 @@ int main(void) {
 -2
 5
 end</pre>`,
-  e:`Each call reads one value and then recurses before printing, so the printing happens on the way back out of the recursion, deepest (last-read) value first. The call that reads nothing (scanf returns <code>EOF</code>) is the base case and prints nothing.`}
+  e:`Each call reads one value and then recurses before printing, so the printing happens on the way back out of the recursion, deepest (last-read) value first. The call that reads nothing (scanf returns <code>EOF</code>) is the base case and prints nothing.`},
+ {q:`A harness tests <code>bool is_even(int n)</code> with the body <code>printf("%d\\n", is_even(n));</code>. For the input <code>4 7</code> it prints:`,
+  o:[`<code>1</code> then <code>0</code>, each on its own line`,`<code>true</code> then <code>false</code>`,`<code>4</code> then <code>7</code>`,`nothing: <code>%d</code> cannot print a <code>bool</code>, so it does not compile`],a:0,
+  e:`A <code>bool</code> is an integer that is 1 or 0, and <code>%d</code> prints it as such. Words appear only if you write an <code>if</code>/<code>else</code> with two <code>printf</code>s, which you do only when the question asks for words.`},
+ {q:`Which loop header reads pairs of ints <code>a b</code> until the input runs out?`,
+  o:[`<code>while (scanf("%d %d", &amp;a, &amp;b) == 1)</code>`,`<code>while (scanf("%d", &amp;a) == 1 &amp;&amp; scanf("%d", &amp;b) == 1)</code>`,`<code>while (scanf("%d", &amp;a, &amp;b) == 2)</code>`,`<code>while (scanf("%d", a) == 1 &amp;&amp; scanf("%d", b) == 1)</code>`],a:1,
+  e:`One <code>%d</code> per value, each checked, joined with <code>&amp;&amp;</code> so the second read is skipped when the first fails. (A) would need <code>== 2</code>: a single call with two conversions returns 2 on success, so with <code>== 1</code> the loop never runs. (C) has one conversion and two pointers. (D) is missing both <code>&amp;</code>s.`},
+ {q:`A harness for <code>void negate_all(int a[], int len)</code> must read a case such as <code>3 10 20 30</code> (length, then elements). Which reading code is correct in CS 136?`,
+  o:[`<code>int n = 0; scanf("%d", &amp;n); int a[n]; for (int i = 0; i &lt; n; ++i) { scanf("%d", &amp;a[i]); }</code>`,`<code>int a[100] = {0}; int n = 0; if (scanf("%d", &amp;n) == 1) { for (int i = 0; i &lt; n; ++i) { scanf("%d", &amp;a[i]); } }</code>`,`<code>int a[100] = {0}; scanf("%d", a); scanf("%d", &amp;a);</code>`,`<code>int a[100] = {0}; int n = 0; scanf("%d", &amp;n); scanf("%d", &amp;a[n]);</code>`],a:1,
+  e:`A fixed buffer with a literal size (a length that is a variable is a VLA, banned), read the length, then exactly <code>n</code> elements into <code>&amp;a[i]</code>. Asserting <code>n &lt;= 100</code> is the right extra. (C) reads two numbers into the first element and into the array's address; (D) reads one number into position <code>n</code>.`},
+ {q:`Write the loop header of a harness for <code>int letter_score(char c)</code> whose input is letters separated by spaces or newlines, such as <code>a b c</code>, and name the one character in the format string that makes it work.`,
+  ans:`<code>while (scanf(" %c", &amp;c) == 1)</code>. The space before <code>%c</code>.`,
+  e:`<code>%c</code> reads <em>any</em> character, including blanks and newlines, so without the leading space every second iteration would read the separator and score it. The space in the format tells <code>scanf</code> to skip whitespace first; <code>%d</code> does that on its own, <code>%c</code> does not.`},
+ {q:`You are given <code>void divide(int a, int b, int *q, int *r)</code> (requires <code>b != 0</code>), which stores the quotient in <code>*q</code> and the remainder in <code>*r</code>. Write the body of a harness that reads pairs <code>a b</code> and prints <code>q r</code> on one line per pair.`,
+  ans:`<pre class="code"><code class="language-c">int a = 0;
+int b = 0;
+while (scanf("%d", &amp;a) == 1 &amp;&amp; scanf("%d", &amp;b) == 1) {
+  int q = 0;
+  int r = 0;
+  divide(a, b, &amp;q, &amp;r);
+  printf("%d %d\\n", q, r);
+}</code></pre>`,
+  e:`The function returns nothing, so the harness prints the two output variables after the call. They must exist before the call (defined, initialized) and be passed by address. The harness does not check <code>b != 0</code>: the <code>.in</code> file must respect the function's requirements, just as an assertion test would. Marks go for: defining <code>q</code> and <code>r</code> first, the <code>&amp;</code>s, checked reads, one line per pair with a newline.`},
+ {q:`Explain why <code>while (scanf("%d", &amp;x) != EOF)</code> makes a harness loop forever on the input <code>3 x 4</code>, and give the exact output of the correct harness <code>while (scanf("%d", &amp;x) == 1) { printf("%d\\n", square(x)); }</code> on that input.`,
+  ans:`After reading 3, <code>scanf</code> meets <code>x</code>, returns 0 (not <code>EOF</code>) and leaves <code>x</code> in the input, so every later call also returns 0 and the condition stays true forever. The correct harness prints <code>9</code> and a newline, then stops; the 4 is never read.`,
+  e:`Bad input is never consumed, so "not end of input" is not the same as "a value was read". The only condition that means "I got a value" is <code>== 1</code>. On valid input both conditions behave the same, which is why the bug hides until a test with a stray character.`}
 ];
 
 QUIZ.ch3=[
@@ -5075,7 +5254,111 @@ int main(void) {
 <li>Purpose <code>// sum_odd returns sum of all odd integer</code>: incomplete; say "from 1 to n inclusive".</li>
 <li><code>// effects: none</code>: do not write an effects line when there is no effect. <code>// requires: n &gt;= 0</code> contradicts "positive".</li>
 <li>Assertion tests that call the function without comparing, e.g. <code>sum_odd(7);</code>, or that use variables <code>main</code> never defined.</li>
-<li>A harness that calls <code>scanf</code> without <code>&amp;</code>, never checks the return value, or prints without <code>\\n</code>.</li></ul>`}
+<li>A harness that calls <code>scanf</code> without <code>&amp;</code>, never checks the return value, or prints without <code>\\n</code>.</li></ul>`},
+ {q:`<b>(6 points)</b> You are given <code>int gcd(int a, int b)</code>, which returns the greatest common divisor of <code>a</code> and <code>b</code> (requires <code>a &gt;= 0</code>, <code>b &gt;= 0</code>, not both zero). Write a testing harness as <code>main</code>: it reads pairs of integers until no more can be read and prints <code>gcd(a, b)</code> for each pair on its own line. Then write a <code>gcd.in</code> / <code>gcd.expect</code> pair for the cases (12, 18), (7, 5), (0, 9) and (9, 9).`,
+  s:`<pre class="code"><code class="language-c">#include "cs136.h"
+
+int main(void) {
+  int a = 0;
+  int b = 0;
+  while (scanf("%d", &amp;a) == 1 &amp;&amp; scanf("%d", &amp;b) == 1) {
+    printf("%d\\n", gcd(a, b));
+  }
+}</code></pre>
+<b>gcd.in</b><pre class="mem">12 18
+7 5
+0 9
+9 9</pre><b>gcd.expect</b><pre class="mem">6
+1
+9
+9</pre>
+<p>When the harness <em>is</em> <code>main</code> no documentation is needed (<code>main</code> is never documented), but the two variables still have to be defined and initialized before the loop, and the loop reads a complete pair per iteration. The expect values are worked out by hand: gcd(12, 18) = 6, gcd(7, 5) = 1, gcd(0, 9) = 9 (zero is divisible by everything), gcd(9, 9) = 9. Whitespace between the pairs is irrelevant to <code>%d</code>, so <code>12 18 7 5 0 9 9 9</code> on one line is the same test; one pair per line is simply easier to read.</p>
+<b>Where marks are lost:</b><ul>
+<li><code>scanf("%d %d", &amp;a, &amp;b) == 1</code> (returns 2 on success, so the loop never runs).</li>
+<li>Reading <code>a</code> and <code>b</code> in one iteration but printing only once after the loop.</li>
+<li>Testing (0, 0) in the <code>.in</code> file: it violates the requirement, so the test is invalid, not "thorough".</li>
+<li>A prompt such as <code>printf("Enter two numbers: ")</code>.</li></ul>`},
+ {q:`<b>(8 points)</b> You are given <code>void add_to_all(int a[], int len, int k)</code>, which adds <code>k</code> to each of the first <code>len</code> elements of <code>a</code>. Write a <code>void</code> harness <code>test_add_to_all</code> in which each test case is <code>k</code>, then a length <code>n</code> (0 to 50), then <code>n</code> integers. For each case it prints the array after the call, elements separated by one space, on its own line. Include documentation and a <code>main</code>. Give an <code>.in</code>/<code>.expect</code> pair with three cases: <code>k = 5</code> on {1, 2, 3}; <code>k = -1</code> on {0}; <code>k = 2</code> on an empty array.`,
+  s:`<pre class="code"><code class="language-c">#include "cs136.h"
+
+// test_add_to_all() reads test cases from input, each an int k, a length n
+//   (0 to 50) and n ints, and prints the n ints after add_to_all(a, n, k),
+//   separated by spaces, one case per line
+// requires: every length read is between 0 and 50
+// effects: reads input, produces output
+void test_add_to_all(void) {
+  int a[50] = {0};
+  int k = 0;
+  int n = 0;
+  while (scanf("%d", &amp;k) == 1 &amp;&amp; scanf("%d", &amp;n) == 1) {
+    assert(n &gt;= 0);
+    assert(n &lt;= 50);
+    for (int i = 0; i &lt; n; ++i) {
+      scanf("%d", &amp;a[i]);
+    }
+    add_to_all(a, n, k);
+    for (int i = 0; i &lt; n; ++i) {
+      if (i &gt; 0) {
+        printf(" ");
+      }
+      printf("%d", a[i]);
+    }
+    printf("\\n");
+  }
+}
+
+int main(void) {
+  test_add_to_all();
+}</code></pre>
+<b>add.in</b><pre class="mem">5 3 1 2 3
+-1 1 0
+2 0</pre><b>add.expect</b><pre class="mem">6 7 8
+-1
+</pre>
+<p>The third expect line is empty (the newline is still printed). The space-before-every-element-except-the-first pattern avoids a trailing space, which would fail the test. The buffer has a literal size, and the length limit is a documented, asserted requirement of the harness itself, since the function has no way to know the buffer size.</p>
+<b>Where marks are lost:</b><ul>
+<li><code>int a[n]</code> (a variable-length array) or no bound at all.</li>
+<li>Reading the elements before the length, or reading <code>k</code> once outside the loop.</li>
+<li><code>printf("%d ", a[i])</code> for every element (trailing space) or no newline for the empty case.</li>
+<li>Asserting the function's result instead of printing the array; forgetting that a <code>void</code> function is observed through its effects.</li></ul>`},
+ {q:`<b>(8 points)</b> You are given <code>int square(int x)</code> and <code>bool is_prime(int n)</code> (requires <code>n &gt;= 0</code>). Write a command-driven harness <code>void test_cmds(void)</code>: each case starts with a character, <code>s</code> followed by one int (print <code>square</code> of it) or <code>p</code> followed by one int (print <code>is_prime</code> of it as <code>1</code> or <code>0</code>). Any other character, or a missing argument, ends the harness. One result per line. Include documentation and show the output for the input below.
+<pre class="mem">s 4
+p 7
+p 8
+s -2
+x 5
+p 11</pre>`,
+  s:`<pre class="code"><code class="language-c">// test_cmds() reads commands from input until none remain or an unknown
+//   command appears: "s x" prints square(x) and "p n" prints is_prime(n)
+//   as 1 or 0, each on its own line
+// effects: reads input, produces output
+void test_cmds(void) {
+  char op = ' ';
+  int n = 0;
+  while (scanf(" %c", &amp;op) == 1) {
+    if (op != 's' &amp;&amp; op != 'p') {
+      return;
+    }
+    if (scanf("%d", &amp;n) != 1) {
+      return;
+    }
+    if (op == 's') {
+      printf("%d\\n", square(n));
+    } else {
+      printf("%d\\n", is_prime(n));
+    }
+  }
+}</code></pre>
+<b>Output</b><pre class="mem">16
+1
+0
+4</pre>
+<p>The <code>x 5</code> line stops the harness, so <code>p 11</code> is never read. Both commands take one int, so the argument is read once, after the command has been checked; a harness whose commands take different numbers of arguments reads them inside each branch instead (Worked example C). The leading space in <code>" %c"</code> is what lets the loop step over the newline left behind by <code>%d</code>.</p>
+<b>Where marks are lost:</b><ul>
+<li><code>scanf("%c", &amp;op)</code> without the space: the second iteration reads <code>'\\n'</code> and the harness stops after one command.</li>
+<li>Comparing <code>op</code> with <code>"s"</code> (a string) instead of <code>'s'</code> (a character).</li>
+<li>Printing <code>true</code>/<code>false</code> when the question said <code>1</code> or <code>0</code>, or vice versa.</li>
+<li>Continuing after an unknown command (the question says it ends the harness) or reading the argument before checking the command.</li></ul>`}
 ];
 
 PRAC.ch3=[
