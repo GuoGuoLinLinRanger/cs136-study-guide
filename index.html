@@ -192,6 +192,7 @@ td code{white-space:nowrap}
       <button data-p="ch4">Ch 4 · Pointers</button>
       <button data-p="ch5">Ch 5 · Arrays &amp; Strings</button>
       <button data-p="sheet">Cheat Sheet</button>
+      <button data-p="remind">Don't Forget</button>
       <button data-p="log">Mistakes Log</button>
       <button data-p="mid">Practice Midterm</button>
     </nav>
@@ -234,7 +235,7 @@ td code{white-space:nowrap}
     <li>Read the theory cards in order. Blue cards are <b>definitions and rules</b>, dashed cards are <b>syntax templates and tables</b>.</li>
     <li>Teal cards (<span style="color:var(--intuit)">Understand it this way</span>) give the plain-English picture. Red cards (<span style="color:var(--pitfall)">Watch out</span>) are the mistakes that cost marks, including the exact ones from your three quizzes.</li>
     <li>Each chapter ends with a gold <b>Must-remember</b> box (your cram sheet), a <b>quiz</b> (multiple choice is clicked; short-answer items are written on paper, then revealed and self-marked), and <b>practice problems</b> that you write in full before revealing the solution.</li>
-    <li>The <b>Cheat Sheet</b> collects every rule, table and template. The <b>Mistakes Log</b> is built from your quizzes: read it the night before. The <b>Practice Midterm</b> is 100 marks in 120 minutes; do it in one sitting.</li>
+    <li>The <b>Cheat Sheet</b> collects every rule, table and template. <b>Don't Forget</b> is the short list of niche facts that slip (sizes, string lengths, which header, which error). The <b>Mistakes Log</b> is built from your quizzes: read it the night before. The <b>Practice Midterm</b> tab has three papers and the Fall 2022 answer key; do each in one sitting.</li>
     <li>Nothing here is compiler-checked, because you will not have a compiler in the exam either. If a snippet looks wrong to you, trust the course notes and check it by hand.</li>
   </ul>
 
@@ -3015,6 +3016,253 @@ q = p;                             // copies EVERY field
   </div>
 </section>
 
+<!-- ============================ DON'T FORGET ============================ -->
+<section class="panel" id="remind">
+  <span class="pill">LAST LOOK</span>
+  <h1 style="margin:.3rem 0">Don't Forget</h1>
+  <p class="lead">The niche facts you do not use day to day and therefore forget first: how long things are, how to count a string, which number a character is, what a call returns, which header a name lives in, and what the exam's fine print lets you skip. Nothing here is new; it is the stuff that is easy to blank on at minute 70. Read it in the last twenty minutes before the exam.</p>
+
+  <h3>1 · "How long is it?" — array vs pointer vs string</h3>
+  <div class="callout intuition"><span class="tag">The one rule</span> C stores the length of <b>nothing</b>. An array's length is a number you wrote in its definition; a pointer knows only one address; a string is the single exception because you can <em>find</em> its end by walking to <code>'\0'</code>. So: array length comes from the definition or a <code>len</code> parameter, pointer length does not exist, string length is <code>strlen</code>.</div>
+  <div class="tbl-wrap"><table>
+    <tr><th>Definition</th><th><code>sizeof</code> (bytes)</th><th>Number of elements / characters</th><th>How you know</th></tr>
+    <tr><td><code>int a[6] = {1, 2, 3, 4, 5, 6};</code></td><td>24</td><td>6 elements, indices 0 to 5</td><td>only because you wrote the 6</td></tr>
+    <tr><td><code>int *p = a;</code></td><td>8 (every pointer)</td><td>unknown: the pointer holds one address</td><td>pass <code>len</code> as a separate <code>int</code></td></tr>
+    <tr><td>parameter <code>int a[]</code> or <code>const int *a</code></td><td>8 inside the function (it is a pointer)</td><td>unknown</td><td>the <code>len</code> parameter; a length written in the parameter (<code>int a[12]</code>) is ignored</td></tr>
+    <tr><td><code>char s[] = "cat";</code></td><td>4 (c, a, t, <code>'\0'</code>)</td><td><code>strlen(s)</code> is 3</td><td>walk to the terminator</td></tr>
+    <tr><td><code>char *q = "cat";</code></td><td>8 (a pointer into read-only data)</td><td><code>strlen(q)</code> is 3</td><td>walk to the terminator</td></tr>
+    <tr><td><code>char buf[10] = "cat";</code></td><td>10</td><td><code>strlen(buf)</code> is 3; bytes 3 to 9 hold <code>'\0'</code> (partial initializers zero-fill)</td><td><code>sizeof</code> counts the box, <code>strlen</code> counts the contents</td></tr>
+    <tr><td><code>sizeof("cat")</code></td><td>4</td><td>a literal is an array that includes its terminator</td><td><code>sizeof("")</code> is 1, <code>strlen("")</code> is 0</td></tr>
+    <tr><td><code>char *c[] = {"Red", "Green", "Blue"};</code></td><td>24 (3 pointers of 8)</td><td>3 strings; <code>strlen(c[1])</code> is 5; <code>c[1][4]</code> is <code>'n'</code></td><td>pass the count 3 too</td></tr>
+    <tr><td><code>struct posn { int x; int y; };</code></td><td>at least 8, possibly more (padding)</td><td>the definition itself reserves no memory</td><td>only <code>sizeof(struct posn)</code> knows</td></tr>
+    <tr><td><code>int</code> / <code>char</code> / any pointer</td><td>4 / 1 / 8</td><td>the only three sizes the course quotes</td><td><code>INT_MAX</code> is 2,147,483,647</td></tr>
+  </table></div>
+  <div class="callout pitfall"><span class="tag">Watch out</span> <code>sizeof(a) / sizeof(a[0])</code> is not allowed in CS 136 (and gives 2, not the length, inside a function). The last valid index is <code>len - 1</code>; the last character of a string is <code>s[strlen(s) - 1]</code> and the terminator is <code>s[strlen(s)]</code>. A string of n characters needs an array of <b>n + 1</b>: <code>char w[5] = "level"</code> compiles but is not a string, so <code>strlen</code> and <code>%s</code> run past the end.</div>
+
+  <h3>2 · Counting the length of a string, four ways</h3>
+  <div class="grid2">
+  <div class="card formula"><span class="tag">With the library</span>
+<pre class="code"><code class="language-c">#include &lt;string.h&gt;
+const int len = strlen(s);   // chars before the first '\0'
+// strlen("cat") is 3, strlen("") is 0, strlen("ab\0cd") is 2
+// hoist it: NEVER  for (int i = 0; i &lt; strlen(s); ++i)</code></pre></div>
+  <div class="card formula"><span class="tag">By hand (index)</span>
+<pre class="code"><code class="language-c">int len = 0;
+while (s[len] != '\0') {
+  ++len;
+}
+// len is now the length; s[len] is the terminator</code></pre></div>
+  <div class="card formula"><span class="tag">By hand (pointer)</span>
+<pre class="code"><code class="language-c">const char *p = s;
+while (*p != '\0') {
+  ++p;
+}
+const int len = p - s;      // pointer subtraction counts chars</code></pre></div>
+  <div class="card formula"><span class="tag">Looping without ever knowing it</span>
+<pre class="code"><code class="language-c">for (int i = 0; s[i] != '\0'; ++i) { ... }   // index version
+for (const char *p = s; *p; ++p) { ... }     // pointer version
+// both stop at the terminator; no strlen needed at all</code></pre></div>
+  </div>
+  <div class="tbl-wrap"><table>
+    <tr><th>Need</th><th>Write</th><th>Not</th></tr>
+    <tr><td>room for a copy of <code>src</code></td><td><code>char dest[strlen(src) + 1]</code> is a VLA (banned): use a literal big enough, e.g. <code>char dest[81]</code></td><td><code>char dest[strlen(src)]</code> (no room for <code>'\0'</code>)</td></tr>
+    <tr><td>room for <code>a</code> followed by <code>b</code></td><td><code>strlen(a) + strlen(b) + 1</code> bytes</td><td>forgetting the +1</td></tr>
+    <tr><td>equal strings</td><td><code>strcmp(a, b) == 0</code></td><td><code>a == b</code> (compares addresses)</td></tr>
+    <tr><td>order</td><td><code>strcmp("ab", "abc") &lt; 0</code> (prefix first: <code>'\0'</code> is 0), <code>strcmp("Zoo", "apple") &lt; 0</code> (uppercase codes are smaller)</td><td>expecting dictionary order that ignores case</td></tr>
+    <tr><td>copy</td><td><code>strcpy(dest, src)</code> (copies the <code>'\0'</code> too)</td><td><code>dest = src</code> (arrays cannot be assigned)</td></tr>
+    <tr><td>read a word</td><td><code>char w[81]; scanf("%80s", w);</code></td><td><code>scanf("%s", w)</code> or <code>&amp;w</code></td></tr>
+    <tr><td>the terminator</td><td><code>'\0'</code>, value 0</td><td><code>'0'</code> (value 48) or <code>"0"</code> (a 2-byte string)</td></tr>
+  </table></div>
+
+  <h3>3 · Characters are numbers</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Character</th><th><code>'\0'</code></th><th><code>'\n'</code></th><th><code>' '</code></th><th><code>'!'</code></th><th><code>'0'</code></th><th><code>'9'</code></th><th><code>'A'</code></th><th><code>'Z'</code></th><th><code>'a'</code></th><th><code>'z'</code></th><th><code>'~'</code></th></tr>
+    <tr><td>Code</td><td>0</td><td>10</td><td>32</td><td>33</td><td>48</td><td>57</td><td>65</td><td>90</td><td>97</td><td>122</td><td>126</td></tr>
+  </table></div>
+  <div class="tbl-wrap"><table>
+    <tr><th>Task</th><th>Write</th><th>Trap</th></tr>
+    <tr><td>digit character to its value</td><td><code>c - '0'</code></td><td>writing <code>c - 48</code> (poor style, loses marks); <code>'7'</code> is 55, not 7</td></tr>
+    <tr><td>value to digit character</td><td><code>d + '0'</code></td><td>type of <code>d + '0'</code> is <code>int</code>; store it in a <code>char</code> or print with <code>%c</code></td></tr>
+    <tr><td>lowercase to uppercase</td><td><code>c - 'a' + 'A'</code> (the gap is 32)</td><td>only after checking <code>c &gt;= 'a' &amp;&amp; c &lt;= 'z'</code></td></tr>
+    <tr><td>is a digit / letter</td><td><code>c &gt;= '0' &amp;&amp; c &lt;= '9'</code>; letters need both ranges</td><td><code>'0' &lt;= c &lt;= '9'</code> (always true: see section 5)</td></tr>
+    <tr><td>print a <code>char</code></td><td><code>%c</code> prints the symbol, <code>%d</code> prints its code: <code>printf("%c%d", 'A', 'A')</code> gives <code>A65</code></td><td><code>printf("%c", 65)</code> prints <code>A</code>; a <code>char</code> passed to an <code>int</code> parameter is fine</td></tr>
+    <tr><td>read a <code>char</code></td><td><code>scanf(" %c", &amp;c)</code> skips whitespace; <code>scanf("%c", &amp;c)</code> returns the space or newline itself</td><td><code>%d</code> always skips leading whitespace</td></tr>
+    <tr><td>quotes</td><td><code>'a'</code> is one <code>int</code>-sized value 97; <code>"a"</code> is a 2-byte array</td><td><code>'ab'</code> is invalid; <code>"a" == 'a'</code> is nonsense</td></tr>
+    <tr><td>whitespace</td><td>in the course: space, newline (and tab)</td><td>the exam reference page lists the codes; still write the character literal in code</td></tr>
+  </table></div>
+
+  <h3>4 · Integer arithmetic you rarely think about</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Fact</th><th>Example</th><th>Trap</th></tr>
+    <tr><td>Limits (<code>limits.h</code>)</td><td><code>INT_MIN</code> = -2,147,483,648, <code>INT_MAX</code> = 2,147,483,647</td><td>overflow is <b>undefined</b>: never predict a wrap-around, never write <code>x + 1 &gt; x</code> as a test</td></tr>
+    <tr><td>Overflow-safe bound</td><td><code>while (m &lt;= INT_MAX - k) { m += k; }</code></td><td><code>m + k &lt;= INT_MAX</code> overflows on the last step; <code>for (i = 1; i &lt;= INT_MAX; ++i)</code> can never end legally</td></tr>
+    <tr><td>Division truncates toward 0</td><td><code>7 / 2</code> is 3, <code>-7 / 2</code> is -3, <code>1 / 2 * 4</code> is 0</td><td>not rounding, not floor</td></tr>
+    <tr><td><code>%</code> keeps the sign of the <b>left</b> operand</td><td><code>-7 % 3</code> is -1, <code>7 % -3</code> is 1; always <code>a == (a / b) * b + a % b</code></td><td>"is odd" must be <code>x % 2 != 0</code>, because <code>-3 % 2</code> is -1, not 1</td></tr>
+    <tr><td>Left to right at equal precedence</td><td><code>7 / 2 * 2</code> is 6, <code>7 * 2 / 2</code> is 7, <code>17 % 5 * 2</code> is 4</td><td>there is no <code>17 % 10</code> hiding in <code>17 % 5 * 2</code></td></tr>
+    <tr><td>Division by zero</td><td><code>x / 0</code> and <code>x % 0</code> crash at run time</td><td>guard with <code>if (y != 0)</code> or <code>requires: y != 0</code> plus an assert</td></tr>
+    <tr><td>Literals</td><td><code>010</code> is 8 (leading 0 = octal), <code>0x1F</code> is 31, <code>'7'</code> is 55</td><td><code>2 ^ 3</code> is 1 (xor); there is no power operator: write a loop or <code>x * x</code></td></tr>
+    <tr><td>Postfix vs prefix</td><td><code>int x = 7; int y = x++ + 1;</code> gives y 8 and x 8; <code>++x</code> would give y 9</td><td>never two side effects in one statement (<code>a[i] = i++</code> is undefined)</td></tr>
+    <tr><td>Powers of ten</td><td><code>int lo = 1; for (int i = 1; i &lt; n; ++i) { lo *= 10; }</code> gives 10<sup>n-1</sup></td><td>10<sup>10</sup> does not fit in an <code>int</code>; 10<sup>9</sup> does</td></tr>
+  </table></div>
+
+  <h3>5 · Truth values and comparisons</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Fact</th><th>Example</th><th>Trap</th></tr>
+    <tr><td>Comparisons produce exactly 0 or 1</td><td><code>(3 &gt; 2) + (3 &gt; 2)</code> is 2; <code>true</code> is 1, <code>false</code> is 0</td><td>a <code>bool</code> assigned 7 holds 1: <code>bool b = 7; printf("%d", b)</code> prints 1</td></tr>
+    <tr><td>Any non-zero value is true</td><td><code>if (5)</code>, <code>if (-2)</code>, <code>if (p)</code> for a non-<code>NULL</code> pointer all run; <code>!5</code> is 0, <code>!0</code> is 1</td><td><code>NULL</code> is false; <code>!p</code> is 1 when <code>p</code> is <code>NULL</code></td></tr>
+    <tr><td>No chained comparison</td><td><code>2 &lt; 1 &lt; 3</code> is 1 (it is <code>(2 &lt; 1) &lt; 3</code> = <code>0 &lt; 3</code>)</td><td>write <code>lo &lt;= n &amp;&amp; n &lt;= hi</code></td></tr>
+    <tr><td><code>=</code> inside a condition</td><td><code>if (x = 5)</code> assigns and is always true; <code>if (x = 0)</code> is always false</td><td>proofread every <code>==</code></td></tr>
+    <tr><td>Short circuit</td><td><code>p != NULL &amp;&amp; *p &gt; 0</code> never dereferences <code>NULL</code>; <code>count == 0 || n &gt; *max</code> never reads <code>*max</code> first time</td><td><code>(0 || -2)</code> is 1, not -2</td></tr>
+    <tr><td>Return the comparison</td><td><code>return lo &lt;= n &amp;&amp; n &lt;= hi;</code></td><td><code>if (...) { return true; } else { return false; }</code> is the long way round</td></tr>
+    <tr><td><code>==</code> is only for numbers, chars and pointers</td><td>strings: <code>strcmp(a, b) == 0</code>; structs: compare field by field in a helper</td><td><code>a == b</code> on arrays compares addresses; on structs it does not compile</td></tr>
+    <tr><td>Dangling else</td><td>an <code>else</code> belongs to the nearest unmatched <code>if</code></td><td>braces always, so it can never bite you</td></tr>
+  </table></div>
+
+  <h3>6 · What <code>printf</code> and <code>scanf</code> return and expect</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Call</th><th>Returns</th><th>Remember</th></tr>
+    <tr><td><code>printf("hi\n")</code></td><td>3 (characters printed, the newline counts)</td><td><code>printf("%d%%\n", 50)</code> prints <code>50%</code> and returns 4; <code>printf("%d", 42)</code> returns 2</td></tr>
+    <tr><td><code>scanf("%d", &amp;x)</code></td><td>1 on success, 0 if the next token is not a number (the token is <b>not</b> consumed, so the next call fails too), <code>EOF</code> when input is exhausted</td><td>loop on <code>== 1</code>; write <code>EOF</code>, not -1; <code>!= EOF</code> spins forever on bad input</td></tr>
+    <tr><td><code>scanf("%d%d", &amp;x, &amp;y)</code></td><td>2 on success (one per item read)</td><td>or two calls joined with <code>&amp;&amp;</code>: the second is skipped if the first fails</td></tr>
+    <tr><td><code>scanf("%80s", w)</code></td><td>1 when a word was read</td><td>skips leading whitespace, stops at whitespace, appends <code>'\0'</code>; <code>char w[81]</code>; no <code>&amp;</code> for an array</td></tr>
+    <tr><td>the <code>&amp;</code></td><td>needed for every scalar: <code>&amp;x</code>, <code>&amp;c</code>, <code>&amp;p.x</code> (<code>.</code> binds tighter than <code>&amp;</code>)</td><td>forgetting it makes <code>scanf</code> write to a garbage address: the course environment flags it, real C just corrupts memory</td></tr>
+    <tr><td><code>printf("%s", s)</code></td><td>prints until the first <code>'\0'</code></td><td>no terminator means it keeps printing memory; a <code>%s</code> with no matching argument is undefined</td></tr>
+    <tr><td><code>%c</code> vs <code>%d</code> vs <code>%p</code></td><td>symbol / decimal / address in hex</td><td><code>printf</code> cannot print a struct or a whole array: loop over it</td></tr>
+    <tr><td>stdout vs stderr</td><td><code>printf</code> is compared with the <code>.expect</code> file; <code>trace_int</code> and friends go to stderr and are ignored by tests</td><td>end every output line with <code>\n</code>; spaces must match exactly</td></tr>
+  </table></div>
+
+  <h3>7 · Operators that bind in surprising ways</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>You write</th><th>C reads</th><th>So</th></tr>
+    <tr><td><code>*p++</code></td><td><code>*(p++)</code></td><td>gives <code>*p</code> then moves the pointer; to add one to the target write <code>(*p)++</code>, <code>++*p</code> or <code>*p += 1</code></td></tr>
+    <tr><td><code>*p.x</code></td><td><code>*(p.x)</code></td><td>wrong for a pointer to a struct: write <code>(*p).x</code> or <code>p-&gt;x</code></td></tr>
+    <tr><td><code>&amp;p.x</code>, <code>&amp;a[i]</code></td><td><code>&amp;(p.x)</code>, <code>&amp;(a[i])</code></td><td>exactly what you want: the address of that field or element</td></tr>
+    <tr><td><code>(*len)--</code></td><td>decrement the target</td><td><code>*len--</code> would decrement the pointer and then dereference the old one</td></tr>
+    <tr><td><code>!x == y</code></td><td><code>(!x) == y</code></td><td>parenthesize what you mean</td></tr>
+    <tr><td><code>-x % y</code></td><td><code>(-x) % y</code></td><td>unary minus first</td></tr>
+    <tr><td><code>int *p, q;</code></td><td><code>q</code> is an <code>int</code>, not a pointer</td><td>one variable per line, star next to the name</td></tr>
+    <tr><td><code>sizeof x</code> vs <code>sizeof(int)</code></td><td>operator on an expression / on a type</td><td>a type name needs the parentheses; <code>sizeof</code> is computed at compile time and never evaluates its operand</td></tr>
+    <tr><td><code>x = y = 0;</code></td><td>right to left, two side effects</td><td>not in CS 136: two statements</td></tr>
+    <tr><td><code>a[i] == 'a' || 'e'</code></td><td><code>(a[i] == 'a') || ('e')</code>, always true</td><td>repeat the comparison: <code>a[i] == 'a' || a[i] == 'e'</code></td></tr>
+  </table></div>
+
+  <h3>8 · Arrays and pointers: identities you can rely on</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Identity</th><th>Meaning</th><th>Consequence</th></tr>
+    <tr><td><code>a</code> is <code>&amp;a[0]</code></td><td>an array name decays to the address of its first element</td><td>pass <code>a</code>, never <code>&amp;a</code> (same value, different type <code>int (*)[5]</code>)</td></tr>
+    <tr><td><code>a[i]</code> is <code>*(a + i)</code></td><td>indexing is pointer arithmetic</td><td><code>*a</code> is <code>a[0]</code>; <code>p[-1]</code> is <code>*(p - 1)</code>; even <code>i[a]</code> compiles</td></tr>
+    <tr><td><code>p + 1</code></td><td>moves <code>sizeof(*p)</code> bytes: 4 for <code>int *</code>, 1 for <code>char *</code></td><td><code>&amp;a[3] - &amp;a[0]</code> is 3 (elements), the addresses differ by 12</td></tr>
+    <tr><td><code>a + len</code></td><td>one past the end: may be computed and compared, never dereferenced</td><td><code>for (const int *p = a; p &lt; a + len; ++p)</code></td></tr>
+    <tr><td>an array name is not a variable</td><td><code>a = p</code>, <code>a++</code>, <code>a = {1, 2}</code> are errors; it behaves like <code>int * const</code></td><td><code>p = a</code> is fine</td></tr>
+    <tr><td>a parameter <code>int a[]</code> is a pointer</td><td>a copy of the caller's address; reassigning it (<code>arr += 1</code>) changes nothing outside</td><td>elements written through it <b>do</b> change the caller's array, unless <code>const</code></td></tr>
+    <tr><td>initializers</td><td><code>int a[5] = {1, 2}</code> is {1, 2, 0, 0, 0}; <code>= {0}</code> is all zeros; a local <code>int a[5];</code> is garbage, a global one is zeros</td><td><code>int a[] = {1, 2, 3}</code> is valid C (length 3) but write the length; <code>char s[] = "cat"</code> is the accepted automatic length</td></tr>
+    <tr><td>lengths are literals</td><td><code>int a[100]</code>; a variable length, even a <code>const int</code> variable, is a VLA</td><td>VLAs, <code>size_t</code> and 2D arrays are banned: flatten with <code>row * cols + col</code></td></tr>
+    <tr><td>no bounds checking</td><td><code>a[len]</code> and <code>a[-1]</code> compile</td><td>run-time error in the course environment ("stack buffer overflow"); the classic is reading <code>arr[i + 1]</code> with <code>i</code> up to <code>len - 1</code></td></tr>
+    <tr><td>shifting</td><td>remove at the front: loop <b>forward</b> with <code>a[i] = a[i + 1]</code>; make room at the front: loop <b>backward</b> with <code>a[i] = a[i - 1]</code></td><td>the wrong direction copies one value everywhere ({4, 4, 4, 4})</td></tr>
+    <tr><td>copying cost</td><td>passing an array copies 8 bytes; passing a struct copies the whole struct, including any array inside it</td><td>assigning <code>s2 = s1</code> copies an array field too (the only way C copies an array for you)</td></tr>
+    <tr><td>returning</td><td>a function may return a pointer into an array it was given (<code>find_min</code>)</td><td>never the address of its own local array or variable</td></tr>
+  </table></div>
+
+  <h3>9 · <code>const</code> in thirty seconds</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Form</th><th>Pointer re-pointable?</th><th>Target writable?</th><th>Use it for</th></tr>
+    <tr><td><code>int *p</code></td><td>yes</td><td>yes</td><td>output parameters, arrays you mutate</td></tr>
+    <tr><td><code>const int *p</code> = <code>int const *p</code></td><td>yes</td><td>no</td><td><b>every</b> array or pointer parameter you only read (the exam requires it)</td></tr>
+    <tr><td><code>int * const p</code></td><td>no</td><td>yes</td><td>how an array name behaves</td></tr>
+    <tr><td><code>const int * const p</code></td><td>no</td><td>no</td><td>rare</td></tr>
+  </table></div>
+  <ul>
+    <li>Read right to left: <code>int * const p</code> is "p is a const pointer to int"; <code>const</code> locks whatever is immediately to its left.</li>
+    <li>Passing a <code>char *</code> to a <code>const char *</code> parameter is fine. Passing a <code>const char *</code> to a <code>char *</code> parameter is a <b>compile error</b> ("discards qualifiers"), even if the function never writes.</li>
+    <li><code>const int *p = &amp;v;</code> does not make <code>v</code> constant: <code>v = 9</code> still works, only <code>*p = 9</code> is rejected.</li>
+    <li>A <code>const</code> local lives in the stack frame and must be initialized where it is defined; only <code>const</code> <em>globals</em> and string literals live in read-only data.</li>
+    <li>A string literal is read-only: <code>char *s = "Hi"; s[0] = 'h';</code> compiles and crashes. <code>char s[] = "Hi";</code> is a writable copy.</li>
+  </ul>
+
+  <h3>10 · Memory-diagram fine print</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Rule</th><th>Detail</th></tr>
+    <tr><td>Every local appears from the moment the frame is pushed</td><td>show <code>???</code> for a variable whose definition has not run yet, and for one that has gone out of scope (a loop's <code>i</code> after the loop)</td></tr>
+    <tr><td>Return address = the line of the <b>call</b> in the caller</td><td><code>main:21</code>, <code>climb:11</code> for recursive calls, <code>OS</code> for <code>main</code>; never the line of a <code>return</code></td></tr>
+    <tr><td>"When line N is reached"</td><td>the state just before line N runs; a comment line is reached after the statements above it in the same block; a line that is skipped over was not reached, so "second time" counts executions only</td></tr>
+    <tr><td>Pointers</td><td>the pointer holds <code>addr_N</code>; the target is tagged <code>[addr_N]</code>, even when the target is a global or an element of an array; two pointers at the same thing hold the same label</td></tr>
+    <tr><td>Sections</td><td>const globals and string literals: read-only data; mutable globals: global data (uninitialized ones are 0); const locals: the frame; a <code>struct</code> definition: nowhere</td></tr>
+    <tr><td>Popping</td><td>when a function returns its frame disappears entirely; values written <em>through pointers</em> into other frames or globals stay</td></tr>
+    <tr><td>Arguments</td><td>copied into the new frame in order; a pointer argument copies the address, so <code>arr</code> in the callee is a second box holding the same <code>addr_N</code></td></tr>
+    <tr><td>Struct and array variables</td><td>show every field or element inside the one variable: <code>q: [addr_1]</code> then <code>.x = 4</code>, <code>.y = 10</code></td></tr>
+  </table></div>
+
+  <h3>11 · Which <code>#include</code> gives what</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>You use</th><th>Header</th><th>Note</th></tr>
+    <tr><td><code>printf</code>, <code>scanf</code>, <code>EOF</code></td><td><code>&lt;stdio.h&gt;</code></td><td>also brings <code>NULL</code></td></tr>
+    <tr><td><code>assert</code></td><td><code>&lt;assert.h&gt;</code></td><td></td></tr>
+    <tr><td><code>bool</code>, <code>true</code>, <code>false</code></td><td><code>&lt;stdbool.h&gt;</code></td><td>needed as soon as a function returns or takes a <code>bool</code></td></tr>
+    <tr><td><code>INT_MAX</code>, <code>INT_MIN</code></td><td><code>&lt;limits.h&gt;</code></td><td>the one people forget in the overflow question</td></tr>
+    <tr><td><code>strlen</code>, <code>strcmp</code>, <code>strcpy</code>, <code>strcat</code></td><td><code>&lt;string.h&gt;</code></td><td></td></tr>
+    <tr><td><code>NULL</code></td><td><code>&lt;stdlib.h&gt;</code> or <code>&lt;stdio.h&gt;</code></td><td></td></tr>
+    <tr><td><code>trace_int</code>, <code>trace_array_int</code></td><td><code>"cs136-trace.h"</code> (via <code>"cs136.h"</code>)</td><td>debugging only; never part of the expected output</td></tr>
+    <tr><td><code>read_int</code> and the rest of the <code>cs136</code> module</td><td><code>"cs136.h"</code></td><td><b>not allowed on the exam</b>: read with <code>scanf</code></td></tr>
+  </table></div>
+  <p style="font-size:.92rem">Angle brackets for standard headers, quotes for local files. The exam says you need not include anything <em>unless the question says so</em>; when it does, list the standard headers you actually use rather than writing <code>"cs136.h"</code>.</p>
+
+  <h3>12 · Exam fine print (from the Fall 2022 instructions; expect the same)</h3>
+  <div class="card def">
+  <ul style="font-size:.95rem">
+    <li><b>Interface requested → full documentation.</b> "Write" or "implement" or "complete" → documentation <em>not</em> required, but you <b>must still assert</b> every requirement that can be asserted.</li>
+    <li><b>Helpers are allowed</b>, must be at module scope (outside <code>main</code>) with a brief purpose statement, and on the exam you do <em>not</em> need to declare a helper before using it.</li>
+    <li><b><code>const</code> is mandatory</b> on array and pointer parameters you do not mutate.</li>
+    <li><b>Every array parameter has length at least one</b>, so <code>a[0]</code> is a safe starting value for a min or max.</li>
+    <li><b>Integer overflow may be ignored</b> unless the question raises it (then use <code>INT_MAX</code> on the safe side of the comparison).</li>
+    <li>No <code>#include</code> needed unless asked; <code>cs136</code> module functions (<code>read_int</code>) are not allowed; provided code may be assumed to have its includes.</li>
+    <li>The reference page gives <code>INT_MIN</code>, <code>INT_MAX</code> and ASCII codes; using the numbers in code instead of <code>'a'</code> is poor style and costs marks.</li>
+    <li>Only language features from the covered sections; for you, Sections 1 to 5 (no modules, no <code>extern</code>, no opaque structures, no heap).</li>
+    <li>Interpretation questions are not answered: state your assumption in the margin and proceed.</li>
+    <li>Extra space is at the back; write "continued on page N" in the answer box. Answer space is not a hint about length.</li>
+  </ul></div>
+
+  <h3>13 · Recipe phrases, verbatim</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>Situation</th><th>Write exactly</th></tr>
+    <tr><td>pointer that must be valid</td><td><code>// requires: p is a valid pointer</code> and <code>assert(p != NULL);</code></td></tr>
+    <tr><td>string parameter</td><td><code>// requires: s is a valid string [not asserted]</code> (you cannot check the terminator exists)</td></tr>
+    <tr><td>array plus length</td><td><code>// requires: a has at least len elements [not asserted]</code> and <code>len &gt;= 0</code> (or <code>&gt; 0</code>) asserted</td></tr>
+    <tr><td>mutation through a pointer</td><td><code>// effects: modifies *p</code>; conditional: <code>may modify *p</code></td></tr>
+    <tr><td>array mutation</td><td><code>// effects: modifies a</code></td></tr>
+    <tr><td>printing / reading</td><td><code>// effects: produces output</code> / <code>reads input</code></td></tr>
+    <tr><td>a function with no return value</td><td><code>void</code>, purpose says what it prints or modifies; a harness is <code>void</code> too</td></tr>
+    <tr><td>tests</td><td>in <code>main</code>, <code>assert(f(7) == 49);</code> against values from the examples; output variables defined <em>before</em> the call, then asserted one by one</td></tr>
+    <tr><td><code>main</code></td><td><code>int main(void)</code>, no documentation needed, returns 0 or nothing</td></tr>
+  </table></div>
+
+  <h3>14 · Things C will not do (and what to write instead)</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>You want</th><th>C says no</th><th>Instead</th></tr>
+    <tr><td>return two values</td><td>one return value only</td><td>pointer parameters for the extra outputs, a status as the return</td></tr>
+    <tr><td>copy an array or string with <code>=</code></td><td>arrays are not assignable</td><td>a loop, or <code>strcpy</code> for strings</td></tr>
+    <tr><td>compare strings or structs with <code>==</code></td><td>addresses / compile error</td><td><code>strcmp(...) == 0</code>; a field-by-field helper</td></tr>
+    <tr><td>print a struct or array</td><td><code>printf</code> prints scalars</td><td>print each field or element</td></tr>
+    <tr><td>a power</td><td>no <code>**</code>; <code>^</code> is xor</td><td>a loop or repeated multiplication</td></tr>
+    <tr><td>an array whose length is a variable</td><td>VLA (banned)</td><td>a literal maximum plus a <code>len</code> variable</td></tr>
+    <tr><td>a function inside a function</td><td>not allowed</td><td>a helper at module scope</td></tr>
+    <tr><td>use a function above its definition</td><td>compile error (implicit declaration)</td><td>a prototype first, e.g. <code>bool is_odd(int n);</code> (relaxed on the exam)</td></tr>
+    <tr><td>a <code>string</code> type</td><td>none</td><td><code>char s[]</code> with a terminator; <code>const char *</code> to read one</td></tr>
+    <tr><td>store an <code>int</code> in a pointer</td><td><code>int *p = x;</code> is a compile error</td><td><code>int *p = &amp;x;</code></td></tr>
+    <tr><td>a switch or goto</td><td>banned in CS 136</td><td><code>if ... else if ... else</code></td></tr>
+    <tr><td>know how long a pointer's target is</td><td>a pointer is 8 bytes and knows nothing else</td><td>pass <code>len</code>; for strings, <code>strlen</code></td></tr>
+  </table></div>
+
+  <div class="remember"><span class="tag">If you remember only five lines</span>
+  <ol>
+    <li>Pointer: 8 bytes, no length. Array: <code>len</code> × element size, length only where you wrote it. String: <code>strlen</code> counts to <code>'\0'</code>, storage is <code>strlen + 1</code>.</li>
+    <li><code>'0'</code> is 48, <code>'\0'</code> is 0, <code>'A'</code> is 65, <code>'a'</code> is 97; <code>c - '0'</code>, <code>c - 'a' + 'A'</code>.</li>
+    <li><code>scanf</code> returns the count (loop on <code>== 1</code>); <code>printf</code> returns characters printed; <code>%</code> follows the left sign; <code>/</code> truncates toward 0.</li>
+    <li><code>char *</code> → <code>const char *</code> fine; the reverse is a compile error; writing to a literal is a run-time crash; out of bounds is a run-time crash; a missing <code>&amp;</code> or a wrong type is caught at compile time.</li>
+    <li>Includes: <code>stdio</code>, <code>assert</code>, <code>stdbool</code>, <code>limits</code>, <code>string</code>. Asserts always, documentation only for interfaces, <code>const</code> on every read-only pointer.</li>
+  </ol></div>
+</section>
+
+
 <!-- ============================ MISTAKES LOG ============================ -->
 <section class="panel" id="log">
   <span class="pill">PERSONAL</span>
@@ -3062,7 +3310,7 @@ q = p;                             // copies EVERY field
 <section class="panel" id="mid">
   <span class="pill">EXAM PREP</span>
   <h1 style="margin:.3rem 0">Practice Midterm</h1>
-  <p class="lead">Two full-length papers covering Chapters 1 to 5, each 12 questions, 100 marks, 120 minutes. They are deliberately longer and harder than the quizzes, with more code-writing marks, because that is where the real midterm will put its weight. Both follow the same structure, so Midterm B is a fair re-test a few days after Midterm A.</p>
+  <p class="lead">Three papers plus an answer key. <b>Midterm A</b> and <b>Midterm B</b> (12 questions, 100 marks, 120 minutes each) drill every fact and recipe rule from Chapters 1 to 5. <b>Midterm C</b> is shaped like the real Fall 2022 paper: fewer trivia blanks, more complete functions, and one rep of every technique that paper and the review session used that A and B did not (pattern printing, an I/O client with your own <code>.in</code>/<code>.expect</code>, an overflow-safe loop, predicate reuse, memory diagrams with re-pointed parameters and recursion, the five <code>const</code> forms, the <code>remove_first</code> trap). Below it, the <b>Fall 2022 answer key</b> covers the actual past paper so you can mark yourself after sitting it.</p>
   <div class="callout intuition"><span class="tag">How to sit them</span> No notes, no compiler, no peeking. Write every answer on paper exactly as you would in the exam, including full documentation and <code>main</code> tests where asked. Start the timer. When you finish (or time runs out), reveal each solution and mark yourself with the marking notes, which follow the quiz markers' habits. Then photograph your pages and send them to me if you want a second opinion graded the way the TAs did.</div>
   <div class="timer"><span id="tm">120:00</span><button class="toggle" id="tmStart">Start</button><button class="toggle" id="tmReset">Reset</button><span style="font-size:.85rem;color:var(--fg-soft)">Timer runs only while this page stays open.</span></div>
   <div class="callout pitfall"><span class="tag">Marking conventions used in the solutions</span> Code questions lose marks exactly as the quizzes did: missing or wrong types, undeclared variables, missing <code>return</code>, asserts in the wrong place, vague purpose statements, tests that do not compare to an expected value, and <code>main</code> code that uses variables it never defined. Style slips (no braces, bad names) cost style marks on assignments and may cost marks here too.</div>
@@ -3075,6 +3323,18 @@ q = p;                             // copies EVERY field
   <h3 id="mid-b">Midterm B</h3>
   <p class="lead" style="font-size:.95rem">Same weighting, new questions: blanks, multiple choice, exact output, a helper trace, a recursion memory snapshot, an eight-bug hunt, and six code-writing questions. Reset the timer before you start.</p>
   <div id="prac-mid2"></div>
+
+  <hr>
+
+  <h3 id="mid-c">Midterm C · past-paper style</h3>
+  <p class="lead" style="font-size:.95rem">Eleven questions, 63 marks, about 130 minutes if you write everything out. Questions 1 to 8 mirror the Fall 2022 paper question for question (same skills, new programs); 9 to 11 are the review session's traps. Every question practises a technique exactly once, so do all of them even if you skip the timer. Exam conventions apply: array parameters have length at least one, <code>const</code> is required where appropriate, and you only <code>#include</code> when a question says so.</p>
+  <div id="prac-mid3"></div>
+
+  <hr>
+
+  <h3 id="key-22">Fall 2022 paper · answer key</h3>
+  <p class="lead" style="font-size:.95rem">For the real past paper (<code>cs-136-1229-midterm.pdf</code>, 50 points, 110 minutes). Sit it cold first, then open these. Question 2's <em>opaque structure</em> and <em>extern</em> and the module in Question 4 are Section 6 material that is not on your midterm; everything else is.</p>
+  <div id="prac-key22"></div>
 </section>
 
 <div class="foot">
@@ -3085,7 +3345,7 @@ q = p;                             // copies EVERY field
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
 /* ---------- navigation ---------- */
-const PANEL_IDS=['home','ch1','ch2','ch3','ch4','ch5','sheet','log','mid'];
+const PANEL_IDS=['home','ch1','ch2','ch3','ch4','ch5','sheet','remind','log','mid'];
 const panels=document.querySelectorAll('.panel');
 const navBtns=document.querySelectorAll('#nav button');
 function show(id){
@@ -6854,6 +7114,603 @@ int main(void) {
 <p><b>Where marks are lost:</b> writing <code>apply_n(dbl(3), 3, 2)</code> or <code>apply_n(dbl(), ...)</code> in the tests (that calls the function instead of passing it); applying <code>f</code> to <code>x</code> every time instead of to the running result; looping <code>i &lt;= n</code> (one application too many); returning <code>x</code> unchanged because the result was stored in a different variable and never returned.</p>`}
 ];
 
+MIDTERMS.mid3=[
+ {t:`Question 1 · 2 marks · Complete a function (no recursion)`,
+  q:`Complete the following function. You may not use recursion. Documentation is not required.
+<pre class="code"><code class="language-c">// min4(a, b, c, d) finds the smallest of a, b, c and d
+int min4(int a, int b, int c, int d) {</code></pre>`,
+  s:`<pre class="code"><code class="language-c">int min4(int a, int b, int c, int d) {
+  int min = a;
+  if (b &lt; min) {
+    min = b;
+  }
+  if (c &lt; min) {
+    min = c;
+  }
+  if (d &lt; min) {
+    min = d;
+  }
+  return min;
+}</code></pre>
+<p>Keep a running minimum and compare each remaining value against it. Three independent <code>if</code>s (not <code>else if</code>): every value must be checked against the current best. An equally good answer writes a helper <code>min2(x, y)</code> and returns <code>min2(min2(a, b), min2(c, d))</code>; helpers are allowed on the exam if they have a brief purpose statement.</p>
+<p><b>Where marks are lost:</b> a chain of <code>if ... else if</code> that stops after the first smaller value; comparing <code>a &lt; b &amp;&amp; a &lt; c &amp;&amp; a &lt; d</code> for each of the four (works but is long and easy to get wrong); forgetting <code>return</code>; a 16-branch nest.</p>`},
+
+ {t:`Question 2 · 8 marks · Explain the concept (two distinct points each)`,
+  q:`<p><b>(a) 4 marks</b> Below are three concepts from the course. <b>Choose two</b> and briefly explain each. Point form is allowed and encouraged. Make <b>two distinct points</b> about each to show you understand it.</p>
+<p style="margin-left:1.2rem"><b>static typing</b> &nbsp;·&nbsp; <b>pass by value</b> &nbsp;·&nbsp; <b>side effect</b></p>
+<p><b>(b) 4 marks</b> Same instructions.</p>
+<p style="margin-left:1.2rem"><b>fixed-length array</b> &nbsp;·&nbsp; <b>re-usability</b> &nbsp;·&nbsp; <b>null terminator</b></p>`,
+  s:`<p>Two marks per concept: one for each distinct, correct point. A definition repeated in different words counts as one point. Model points:</p>
+<ul>
+<li><b>static typing.</b> (1) Every variable, parameter and return value has a type fixed when the code is written and checked by the compiler before the program runs, unlike Racket, which checks types when a value is used. (2) A type mismatch (passing an <code>int</code> where an <code>int *</code> is expected, calling a function with the wrong number of arguments, using an undeclared name) is a <em>compile-time</em> error: no executable is produced. (Also acceptable: the type decides how many bytes the value occupies and how its bits are interpreted, e.g. <code>%c</code> vs <code>%d</code>.)</li>
+<li><b>pass by value.</b> (1) A call copies the <em>value</em> of each argument into the parameter in the callee's new stack frame. (2) So mutating a parameter never changes the caller's variable; to let a function change the caller's variable you pass its address and mutate through the pointer (emulated pass by reference). (Also acceptable: an array argument looks like an exception only because the array decays to a pointer, so the address is what gets copied.)</li>
+<li><b>side effect.</b> (1) Anything a function does other than return a value: producing output, reading input, mutating a global variable, mutating through a pointer. (2) Side effects must be documented with an <code>effects:</code> line; a function without them is pure, and pure functions are easier to test and reuse. (Also: mutating a local or a parameter is <em>not</em> a side effect because it dies with the frame.)</li>
+<li><b>fixed-length array.</b> (1) The length is a literal chosen when the array is defined (<code>int a[6]</code>) and can never grow or shrink; an oversized array with a separate <code>len</code> is the workaround. (2) C stores the length nowhere, so a function needs it as a separate parameter, and there is no bounds checking: <code>a[6]</code> compiles and corrupts memory. (Also: the elements are contiguous, <code>len * sizeof(element)</code> bytes.)</li>
+<li><b>re-usability.</b> (1) Write a function once, for a general problem, taking its inputs as parameters instead of hard-coding values, so it can be called from many places and programs (e.g. <code>in_range</code> used by several predicates, <code>swap</code> used by a sort). (2) Reusable code has a clear interface (documented purpose, requirements, effects) and avoids depending on global state, so a caller needs to know only the interface, not the body.</li>
+<li><b>null terminator.</b> (1) The character <code>'\\0'</code> (value 0, not the digit <code>'0'</code>) stored after the last character marks where a string ends, so a string of n characters needs an array of n + 1. (2) <code>strlen</code>, <code>printf("%s")</code>, <code>strcmp</code> and every string loop rely on it; an array without it (<code>char w[5] = "level"</code>) is not a string and those functions run past the end.</li>
+</ul>
+<p><b>Where marks are lost:</b> one point stated twice; an example with no statement of the rule; explaining a different concept (e.g. describing pointers under "pass by value" without saying what is copied).</p>`},
+
+ {t:`Question 3 · 6 marks · Pattern printing with nested loops`,
+  q:`Write the function <code>zigzag(width, height, z)</code>. It returns no value and draws a rectangle of <code>height</code> rows and <code>width</code> columns containing a zig-zag pattern. The pattern starts in the upper-left corner and moves right until it reaches the edge, then reverses direction, and keeps zig-zagging until <code>height</code> rows have been printed. The <code>width</code> must be at least two, and <code>height</code> must be at least <code>width</code>. The third parameter <code>z</code> is the <code>char</code> the zig-zag is drawn in; the rest of the shape is drawn with the period character <code>'.'</code>. Include the appropriate documentation.
+<p>Output for <code>zigzag(3, 7, 'z')</code> and <code>zigzag(4, 9, '#')</code>:</p>
+<pre class="mem">z..        #...
+.z.        .#..
+..z        ..#.
+.z.        ...#
+z..        ..#.
+.z.        .#..
+..z        #...
+           .#..
+           ..#.</pre>`,
+  s:`<pre class="code"><code class="language-c">// zigzag(width, height, z) prints a rectangle of height rows and width
+//   columns of '.' characters with a zig-zag of z characters that starts
+//   in the top-left corner and bounces between the left and right edges
+// requires: width &gt;= 2
+//           height &gt;= width
+// effects: produces output
+void zigzag(int width, int height, char z) {
+  assert(width &gt;= 2);
+  assert(height &gt;= width);
+  int col = 0;      // column that holds z in the current row
+  int step = 1;     // +1 while moving right, -1 while moving left
+  for (int row = 0; row &lt; height; ++row) {
+    for (int c = 0; c &lt; width; ++c) {
+      if (c == col) {
+        printf("%c", z);
+      } else {
+        printf(".");
+      }
+    }
+    printf("\\n");
+    if (col == width - 1) {
+      step = -1;
+    } else if (col == 0) {
+      step = 1;
+    }
+    col += step;
+  }
+}</code></pre>
+<p><b>Check by hand</b> (<code>width = 3</code>): rows print <code>col</code> = 0, 1, 2, then at <code>col == 2</code> the step flips to -1, so 1, 0, then at <code>col == 0</code> it flips back: 1, 2. Sequence 0 1 2 1 0 1 2 matches the example. For <code>width = 4, height = 9</code>: 0 1 2 3 2 1 0 1 2. Because <code>width &gt;= 2</code>, the two edge tests can never both be true in one row.</p>
+<p><b>The technique:</b> one variable for the current position and one for the direction, flipped at the edges <em>after</em> the row is printed. An inner loop prints a whole row character by character; <code>printf("\\n")</code> once per row.</p>
+<p><b>Marking:</b> documentation with both requirements and <code>effects: produces output</code> (1), the asserts (1), nested loops producing exactly <code>width</code> characters and one newline per row (1), correct placement of <code>z</code> via a column variable (1), direction reversal at both edges (2).</p>
+<p><b>Where marks are lost:</b> reversing one row late (testing the edge before printing), which prints the same column twice; trying to compute the column arithmetically with <code>%</code> and getting the turnaround wrong; printing <code>z</code> as a string (<code>"%s"</code>) or forgetting the newline; declaring the function <code>int</code>; no <code>effects:</code> line for a printing function.</p>`},
+
+ {t:`Question 4 · 10 marks · Design an I/O test, then write the testing client`,
+  q:`The following functions have <b>already been written</b> above your code (do not write them). They keep track of the bounding box of a collection of points: the smallest rectangle, with sides parallel to the axes, that surrounds every point added so far. Points may sit on the edges or inside the box. Initially, and after a reset, there are no points, so there is no box; after one point is added, the box is that single point.
+<pre class="code"><code class="language-c">struct point {
+  int x;
+  int y;
+};
+
+struct bbox {
+  int count;                  // number of points added since the last reset
+  struct point bottom_left;
+  struct point upper_right;
+};
+
+// bbox_reset(b) removes all points from *b
+// requires: b is a valid pointer
+// effects: modifies *b
+void bbox_reset(struct bbox *b);
+
+// bbox_add_point(b, p) adds the point *p to the collection in *b and
+//   returns true only if the bounding box changed
+// requires: b and p are valid pointers
+// effects: may modify *b
+bool bbox_add_point(struct bbox *b, const struct point *p);
+
+// bbox_get_box(b, bottom_left, upper_right) stores the corners of the
+//   bounding box of *b in *bottom_left and *upper_right
+// requires: b, bottom_left and upper_right are valid pointers
+//           at least one point has been added to *b
+// effects: modifies *bottom_left and *upper_right
+void bbox_get_box(const struct bbox *b, struct point *bottom_left,
+                  struct point *upper_right);</code></pre>
+<p>You have been asked to write an <b>I/O testing client</b>. It reads a point as a pair of integers and adds it. This repeats until an unsuccessful read, which simply ends the client. If the bounding box changes, the client prints the box as shown below; otherwise it prints <code>n/c</code> ("no change"). If the point read is <code>(0, 0)</code> it is <b>not</b> added: instead the client resets the collection and prints <code>reset</code>. A newline follows every point, so the <code>.in</code> and <code>.expect</code> files line up.</p>
+<pre class="mem">SIMPLE.in        |  SIMPLE.expect
+-2 -3            |  (-2,-3)-(-2,-3)
+5 7              |  (-2,-3)-(5,7)
+1 4              |  n/c
+0 0              |  reset</pre>
+<p><b>(a) 4 marks</b> Write your own <b>thorough</b> test for the bounding box functions: a <code>YOURTEST.in</code> and the matching <code>YOURTEST.expect</code>. Say in a few words what each line tests.</p>
+<p><b>(b) 6 marks</b> Write the testing client (a complete <code>main</code>). You must <code>#include</code> every library you use.</p>`,
+  s:`<p><b>(a)</b> A thorough test hits every behaviour the description promises at least once. Nine lines is plenty:</p>
+<pre class="mem">YOURTEST.in   |  YOURTEST.expect   |  what it tests
+1 1           |  (1,1)-(1,1)       |  first point: box is a single point
+3 4           |  (1,1)-(3,4)       |  grows up and to the right
+2 2           |  n/c               |  strictly inside: no change
+3 1           |  n/c               |  on the edge (a corner): no change
+-2 4          |  (-2,1)-(3,4)      |  grows to the left; negative coordinate
+3 4           |  n/c               |  duplicate of an existing point
+0 0           |  reset             |  (0,0) resets instead of being added
+0 0           |  reset             |  reset when already empty still prints
+5 -5          |  (5,-5)-(5,-5)     |  the first point after a reset starts over</pre>
+<p>Markers look for: the single-point box, growth in more than one direction, an inside point, an edge point, negatives, the reset line, and behaviour after a reset. The <code>.expect</code> values must be worked out by hand and be exactly right, including the format <code>(x,y)-(x,y)</code> with no spaces.</p>
+<p><b>(b)</b></p>
+<pre class="code"><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;stdbool.h&gt;
+
+int main(void) {
+  struct bbox box = {0, {0, 0}, {0, 0}};
+  bbox_reset(&amp;box);
+  struct point p = {0, 0};
+  while (scanf("%d", &amp;p.x) == 1 &amp;&amp; scanf("%d", &amp;p.y) == 1) {
+    if (p.x == 0 &amp;&amp; p.y == 0) {
+      bbox_reset(&amp;box);
+      printf("reset\\n");
+    } else if (bbox_add_point(&amp;box, &amp;p)) {
+      struct point bl = {0, 0};
+      struct point ur = {0, 0};
+      bbox_get_box(&amp;box, &amp;bl, &amp;ur);
+      printf("(%d,%d)-(%d,%d)\\n", bl.x, bl.y, ur.x, ur.y);
+    } else {
+      printf("n/c\\n");
+    }
+  }
+}</code></pre>
+<p><b>Why it looks like this.</b> The state lives in a <code>struct bbox</code> owned by <code>main</code>; every function gets its address. <code>&amp;p.x</code> means <code>&amp;(p.x)</code> because <code>.</code> binds tighter than <code>&amp;</code>, so <code>scanf</code> writes straight into the field. Reading the two integers with two <code>scanf</code> calls joined by <code>&amp;&amp;</code> stops at the first failure (short-circuit); <code>while (scanf("%d%d", &amp;p.x, &amp;p.y) == 2)</code> is also accepted. <code>bbox_add_point</code> is called inside the condition because its <code>bool</code> result is the decision. The output variables <code>bl</code> and <code>ur</code> are defined <em>before</em> <code>bbox_get_box</code> is called and passed by address. <code>stdio.h</code> is needed for <code>scanf</code>/<code>printf</code> and <code>stdbool.h</code> for the <code>bool</code> return type; nothing else is used (no <code>assert</code>, no strings).</p>
+<p><b>Marking:</b> includes (1), reading pairs until a failed read with the return value checked (1), the <code>(0, 0)</code> reset case tested <em>before</em> adding (1), using the <code>bool</code> result to choose between the box and <code>n/c</code> (1), <code>bbox_get_box</code> called with addresses of variables defined first and printed in the exact format (1), a newline after every case and nothing extra printed (1).</p>
+<p><b>Where marks are lost:</b> adding the point and then checking for <code>(0, 0)</code>; <code>while (scanf(...) != EOF)</code>, which loops forever on a bad token; passing <code>box</code> instead of <code>&amp;box</code>; printing spaces inside the box format; calling <code>bbox_get_box</code> when the box has just been reset (requirement violated); declaring <code>bl</code> and <code>ur</code> after the call; forgetting that <code>main</code> needs no documentation but every helper you add does.</p>`},
+
+ {t:`Question 5 · 3 marks · A loop that must not overflow`,
+  q:`Write a function <code>print_factors(k)</code> that prints every positive <code>int</code> that is divisible by the positive <code>int</code> <code>k</code>, including <code>k</code> itself, one per line in increasing order. It returns no value. Use the constant <code>INT_MAX</code> and make sure your function never encounters integer overflow. Note that you do not have to check <em>every</em> positive <code>int</code>. You must <code>#include</code> every library you use.`,
+  s:`<pre class="code"><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;limits.h&gt;
+#include &lt;assert.h&gt;
+
+// print_factors(k) prints every positive int divisible by k, one per line,
+//   in increasing order
+// requires: k &gt; 0
+// effects: produces output
+void print_factors(int k) {
+  assert(k &gt; 0);
+  int m = k;
+  printf("%d\\n", m);
+  while (m &lt;= INT_MAX - k) {
+    m += k;
+    printf("%d\\n", m);
+  }
+}</code></pre>
+<p><b>The technique.</b> The multiples of <code>k</code> are <code>k, 2k, 3k, ...</code>, so step by <code>k</code> instead of testing every integer. The naive condition <code>m + k &lt;= INT_MAX</code> overflows on the last step (and <code>for (int i = 1; i &lt;= INT_MAX; ++i)</code> can never become false without overflowing), so move the subtraction to the safe side: <code>m &lt;= INT_MAX - k</code> asks "is there room for one more step?" without ever computing a value above <code>INT_MAX</code>. Printing the first multiple before the loop keeps the loop body uniform.</p>
+<p><b>Check:</b> <code>k = INT_MAX</code> prints <code>INT_MAX</code> once; the condition <code>INT_MAX &lt;= 0</code> is false. <code>k = 1</code>: when <code>m</code> is <code>INT_MAX - 1</code> the condition holds, <code>m</code> becomes <code>INT_MAX</code> and prints; then <code>INT_MAX &lt;= INT_MAX - 1</code> is false. Every value from 1 to <code>INT_MAX</code> is printed, none twice.</p>
+<p><b>Marking:</b> steps of <code>k</code> rather than testing every int (1), an overflow-free bound using <code>INT_MAX</code> (1), includes <code>stdio.h</code> and <code>limits.h</code> (and <code>assert.h</code> if you assert) with correct output format (1).</p>
+<p><b>Where marks are lost:</b> <code>for (int m = k; m &lt;= INT_MAX; m += k)</code> (the loop variable overflows instead of exiting: undefined behaviour); <code>m + k &lt;= INT_MAX</code> (same overflow one step earlier); forgetting <code>limits.h</code>; <code>m &lt; INT_MAX - k</code> (skips the last multiple when it lands exactly on <code>INT_MAX</code>, e.g. <code>k = INT_MAX</code> would print nothing after the first).</p>`},
+
+ {t:`Question 6 · 8 marks · Build predicates on a helper`,
+  q:`<p><b>(a) 2 marks</b> Implement the following function, which is passed three <code>int</code>s.</p>
+<pre class="code"><code class="language-c">// in_range(lo, n, hi) returns true if (lo &lt;= n &lt;= hi), and false otherwise</code></pre>
+<p><b>(b) 1 mark</b> Show how you could (or could not) use <code>in_range</code> to test whether an <code>int</code> is valid (within the range of valid <code>int</code>s).</p>
+<p><b>(c) 1 mark</b> Show how you could (or could not) use <code>in_range</code> to test whether a <code>char</code> is an uppercase letter.</p>
+<p><b>(d) 1 mark</b> Write a predicate <code>is_valid_3_digit(k)</code> that uses <code>in_range</code> to decide whether <code>k</code> is a positive three-digit number whose first digit is non-zero.</p>
+<p><b>(e) 3 marks</b> Write a <b>non-recursive</b> predicate <code>is_valid_n_digit(k, n)</code> that uses <code>in_range</code> to decide whether <code>k</code> is a positive <code>n</code>-digit number whose first digit is non-zero. <code>n</code> is a positive <code>int</code> less than 10.</p>`,
+  s:`<p><b>(a)</b></p>
+<pre class="code"><code class="language-c">bool in_range(int lo, int n, int hi) {
+  return lo &lt;= n &amp;&amp; n &lt;= hi;
+}</code></pre>
+<p>Two comparisons joined by <code>&amp;&amp;</code>. Writing <code>lo &lt;= n &lt;= hi</code> compiles but is wrong: it evaluates <code>(lo &lt;= n)</code> to 0 or 1 and compares <em>that</em> with <code>hi</code>. No <code>if (...) { return true; } else { return false; }</code> is needed: the comparison already is a <code>bool</code>.</p>
+<p><b>(b)</b> You can write <code>in_range(INT_MIN, n, INT_MAX)</code>, but it is <b>always true</b>, so it tests nothing: a value stored in an <code>int</code> is already inside that range, and a computation that leaves the range is undefined behaviour rather than an out-of-range value you could detect afterwards. (Either "could, but it is useless" or "could not, because every int is in range" earns the mark with that reason.)</p>
+<p><b>(c)</b> <code>in_range('A', c, 'Z')</code>. Characters are small integers, so a <code>char</code> is passed to an <code>int</code> parameter without complaint, and the uppercase letters are contiguous in ASCII (65 to 90). Write the character literals, never 65 and 90.</p>
+<p><b>(d)</b></p>
+<pre class="code"><code class="language-c">// is_valid_3_digit(k) returns true if k is a positive three-digit number
+bool is_valid_3_digit(int k) {
+  return in_range(100, k, 999);
+}</code></pre>
+<p><b>(e)</b></p>
+<pre class="code"><code class="language-c">// is_valid_n_digit(k, n) returns true if k is a positive n-digit number
+//   whose first digit is not zero
+// requires: 1 &lt;= n &lt;= 9
+bool is_valid_n_digit(int k, int n) {
+  assert(n &gt;= 1);
+  assert(n &lt;= 9);
+  int lo = 1;
+  for (int i = 1; i &lt; n; ++i) {
+    lo *= 10;
+  }
+  return in_range(lo, k, lo * 10 - 1);
+}</code></pre>
+<p>The smallest <code>n</code>-digit number is 10<sup>n-1</sup>, built by multiplying by 10 <code>n - 1</code> times (there is no power operator, and <code>^</code> is xor); the largest is one less than 10<sup>n</sup>. Check: <code>n = 1</code> gives the range 1 to 9 (0 has a leading zero, so it is correctly rejected); <code>n = 3</code> gives 100 to 999, matching (d). The limit <code>n &lt; 10</code> is there because 10<sup>10</sup> does not fit in an <code>int</code>; with <code>n = 9</code> the upper bound 999,999,999 still does.</p>
+<p><b>Marking:</b> (a) both comparisons with <code>&amp;&amp;</code> and a <code>bool</code> return type (2); (b) the always-true observation (1); (c) character literals in the call (1); (d) one call with 100 and 999 (1); (e) loop building the power of ten (1), correct bounds including <code>lo * 10 - 1</code> (1), no recursion, with the requirement on <code>n</code> asserted (1).</p>
+<p><b>Where marks are lost:</b> <code>lo &lt;= n &lt;= hi</code>; returning an <code>int</code> 0/1 with the function declared <code>bool</code> is fine, but declaring the predicates <code>int</code> is not; using <code>pow</code> (not available, returns a <code>double</code>); a recursive (e); off-by-one bounds such as <code>lo * 10</code>; forgetting that the question demands reuse of <code>in_range</code> (a hand-written comparison earns nothing in (d) and (e)).</p>`}
+];
+
+MIDTERMS.mid3.push(
+ {t:`Question 7 · 6 marks · Memory snapshots: recursion with pointer parameters`,
+  q:`<pre class="mem"> 1: int calls = 0;                  // global variable, present for this question only
+ 2: const int STEP = 2;
+ 3:
+ 4: void climb(int n, int *total, int *depth) {
+ 5:   calls = calls + 1;
+ 6:   if (n &lt;= 0) {
+ 7:     *total = 0;
+ 8:     *depth = calls;
+ 9:     // SNAPSHOT A (this line reached for the FIRST time)
+10:   } else {
+11:     climb(n - STEP, total, depth);
+12:     const int sq = n * n;
+13:     *total = *total + sq;
+14:     // SNAPSHOT B (this line reached for the SECOND time)
+15:   }
+16: }
+17:
+18: int main(void) {
+19:   int t = -1;
+20:   int d = -1;
+21:   climb(5, &amp;t, &amp;d);
+22:   printf("%d %d\\n", t, d);
+23: }</pre>
+<p>Draw the complete memory (read-only data, global data, and every stack frame with all variables, values and return addresses) at <b>(a) 3 marks</b> SNAPSHOT A and <b>(b) 2 marks</b> SNAPSHOT B. A snapshot shows the state when execution <em>reaches</em> the comment line, so the statements above it in the same block have run. A line that is skipped over is not "reached". Use <code>addr_N</code> labels instead of arrows and <code>???</code> for values that are not yet initialized. <b>(c) 1 mark</b> What does the program print?</p>`,
+  s:`<p><b>Working.</b> <code>main</code> calls <code>climb(5, &amp;t, &amp;d)</code>: <code>calls</code> becomes 1, 5 is positive, so line 11 calls <code>climb(3, ...)</code> (<code>calls</code> 2), which calls <code>climb(1, ...)</code> (<code>calls</code> 3), which calls <code>climb(-1, ...)</code> (<code>calls</code> 4). Now <code>n &lt;= 0</code>: <code>*total = 0</code> sets <code>t</code>, <code>*depth = 4</code> sets <code>d</code>, and SNAPSHOT A is reached with four <code>climb</code> frames alive. Every one of them has a <code>sq</code> slot (it is a local of the function) and none has reached line 12, so each <code>sq</code> is <code>???</code>.</p>
+<p><b>(a) SNAPSHOT A</b></p>
+<pre class="mem">READ-ONLY DATA:
+  STEP: 2
+
+GLOBAL DATA:
+  calls: 4
+
+STACK:
+=========================
+climb:
+  n: -1
+  total: addr_1
+  depth: addr_2
+  sq: ???
+  return address: climb:11
+=========================
+climb:
+  n: 1
+  total: addr_1
+  depth: addr_2
+  sq: ???
+  return address: climb:11
+=========================
+climb:
+  n: 3
+  total: addr_1
+  depth: addr_2
+  sq: ???
+  return address: climb:11
+=========================
+climb:
+  n: 5
+  total: addr_1
+  depth: addr_2
+  sq: ???
+  return address: main:21
+=========================
+main:
+  t: 0 [addr_1]
+  d: 4 [addr_2]
+  return address: OS
+=========================</pre>
+<p>Marks: 1 for <code>STEP</code> in read-only data, <code>calls: 4</code> in global data, and <code>main</code> with <code>t: 0</code>, <code>d: 4</code> tagged <code>[addr_1]</code>/<code>[addr_2]</code>; 1 for four <code>climb</code> frames with <code>n</code> = -1, 1, 3, 5 from the top down, every frame holding the <em>same</em> two addresses (the pointers are copied unchanged down the recursion); 1 for <code>sq: ???</code> in every frame and the return addresses (<code>climb:11</code> for the three inner calls, <code>main:21</code> for the first).</p>
+<p><b>(b) SNAPSHOT B, second time.</b> After SNAPSHOT A the innermost call returns and its frame is popped. <code>climb(1)</code> resumes at line 12: <code>sq = 1</code>, <code>t</code> becomes 0 + 1 = 1, SNAPSHOT B is reached for the <em>first</em> time, and that frame is popped. <code>climb(3)</code> resumes: <code>sq = 9</code>, <code>t</code> becomes 1 + 9 = 10, and SNAPSHOT B is reached for the <em>second</em> time:</p>
+<pre class="mem">READ-ONLY DATA:
+  STEP: 2
+
+GLOBAL DATA:
+  calls: 4
+
+STACK:
+=========================
+climb:
+  n: 3
+  total: addr_1
+  depth: addr_2
+  sq: 9
+  return address: climb:11
+=========================
+climb:
+  n: 5
+  total: addr_1
+  depth: addr_2
+  sq: ???
+  return address: main:21
+=========================
+main:
+  t: 10 [addr_1]
+  d: 4 [addr_2]
+  return address: OS
+=========================</pre>
+<p>Marks: 1 for exactly two <code>climb</code> frames left (the two inner ones are gone) with <code>sq: 9</code> in the top frame and still <code>???</code> in the <code>n: 5</code> frame; 1 for <code>t: 10</code>, <code>d: 4</code>, and <code>calls</code> still 4 (nothing decrements it on the way back up).</p>
+<p><b>(c)</b> <code>climb(5)</code> then finishes with <code>sq = 25</code> and <code>t = 10 + 25 = 35</code>, so the program prints <code>35 4</code>.</p>
+<p><b>Where marks are lost:</b> forgetting the <code>sq</code> slot in frames that have not reached line 12 (the review session's exact warning: "remember to put uninitialized variables"); drawing frames that have already been popped at B ("remember to pop the stack frames when a function returns"); return address <code>climb:9</code> or <code>climb:14</code> (it is the line of the <em>call</em> in the caller); <code>calls: 3</code> at B (it never decreases); forgetting that <code>t</code> and <code>d</code> in <code>main</code> change at A even though <code>main</code> is not running.</p>`},
+
+ {t:`Question 8 · 6 marks · Memory diagram: globals, a re-pointed parameter, three frames`,
+  q:`<pre class="mem"> 1: int total = 10;                 // global variable, present for this question only
+ 2: const int BONUS = 4;
+ 3:
+ 4: int combine(int *p, int q, const int *r) {
+ 5:   const int sum = total + BONUS + *p + q + *r;
+ 6:   // DRAW THE DIAGRAM HERE
+ 7:   return sum;
+ 8: }
+ 9:
+10: int shuffle(int *a, int *b) {
+11:   *a = *a - *b;
+12:   b = a;
+13:   total = total * 2;
+14:   return combine(b, *a, &amp;total);
+15: }
+16:
+17: int main(void) {
+18:   int x = 7;
+19:   int y = shuffle(&amp;x, &amp;total);
+20:   printf("%d\\n", y);
+21: }</pre>
+<p><b>(a) 4 marks</b> Draw an appropriate memory diagram that illustrates the complete state of the program when line 6 is reached. <b>(b) 1 mark</b> What does the program print? <b>(c) 1 mark</b> What would it print if line 12 were deleted?</p>`,
+  s:`<p><b>Working.</b> <code>main</code>: <code>x = 7</code>; <code>shuffle(&amp;x, &amp;total)</code> gets <code>a</code> = the address of <code>x</code> (<code>addr_1</code>) and <code>b</code> = the address of the <em>global</em> <code>total</code> (<code>addr_2</code>). Line 11: <code>x = 7 - 10 = -3</code>. Line 12 re-points <code>b</code> at <code>x</code>, so <code>a</code> and <code>b</code> are now aliases; the global is not touched by this line. Line 13: <code>total = 20</code>. Line 14 calls <code>combine(b, *a, &amp;total)</code>, so <code>p = addr_1</code>, <code>q = -3</code>, <code>r = addr_2</code>. Line 5: <code>sum = 20 + 4 + (-3) + (-3) + 20 = 38</code>.</p>
+<p><b>(a)</b></p>
+<pre class="mem">READ-ONLY DATA:
+  BONUS: 4
+
+GLOBAL DATA:
+  total: 20 [addr_2]
+
+STACK:
+=========================
+combine:
+  p: addr_1
+  q: -3
+  r: addr_2
+  sum: 38
+  return address: shuffle:14
+=========================
+shuffle:
+  a: addr_1
+  b: addr_1
+  return address: main:19
+=========================
+main:
+  x: -3 [addr_1]
+  y: ???
+  return address: OS
+=========================</pre>
+<p>Marks: 1 for <code>BONUS</code> in read-only data and <code>total: 20</code> in global data tagged with the address that <code>r</code> holds (a pointer may point at a global; the tag goes on the global); 1 for <code>main</code> with <code>x: -3</code> (changed through <code>a</code>) and <code>y: ???</code> (the call has not returned); 1 for <code>shuffle</code> with <code>a</code> and <code>b</code> holding the <em>same</em> address after line 12 and return address <code>main:19</code>; 1 for <code>combine</code> with <code>p: addr_1</code>, <code>q: -3</code>, <code>r: addr_2</code>, <code>sum: 38</code> and return address <code>shuffle:14</code>. The <code>const</code> local <code>sum</code> lives in the frame, not in read-only data: only <em>global</em> constants go there. If you draw arrows instead of labels, every arrow must start inside the pointer's box and end at the target's box.</p>
+<p><b>(b)</b> <code>38</code>.</p>
+<p><b>(c)</b> Without line 12, <code>b</code> still holds <code>addr_2</code>, so <code>combine</code> receives <code>p = addr_2</code> and <code>*p</code> is the global, now 20: <code>sum = 20 + 4 + 20 + (-3) + 20 = 61</code>. The program prints <code>61</code>. One re-pointing changed the answer by 23, which is why the diagram must track where each pointer points <em>at the moment of the snapshot</em>, not where it started.</p>
+<p><b>Where marks are lost:</b> <code>b: addr_2</code> in <code>shuffle</code>'s frame (missing the effect of line 12); <code>total: 10</code> (missing line 13) or <code>total: 17</code> (applying line 11 to the wrong target); writing <code>x: 7</code> because "shuffle has its own copy" (it has a copy of the <em>address</em>, and wrote through it); putting <code>sum</code> or <code>BONUS</code> in the wrong section; a return address of <code>main:20</code> or <code>combine:7</code>.</p>`},
+
+ {t:`Question 9 · 6 marks · Compile error, runtime error, or fine?`,
+  q:`For each program fragment, state whether it produces a <b>compile-time error</b>, a <b>run-time error</b> in the course environment, or <b>runs without error</b>, and give the reason in one sentence. If it runs, state the output. Assume <code>#include "cs136.h"</code> and that the fragments are complete otherwise.
+<p><b>(i)</b></p>
+<pre class="code"><code class="language-c">int first(const char *s) {
+  return *s;
+}
+int main(void) {
+  char *s = "Hello";
+  printf("%d\\n", first(s));
+}</code></pre>
+<p><b>(ii)</b></p>
+<pre class="code"><code class="language-c">int first(char *s) {
+  return *s;
+}
+int main(void) {
+  const char *s = "Hello";
+  printf("%d\\n", first(s));
+}</code></pre>
+<p><b>(iii)</b></p>
+<pre class="code"><code class="language-c">void clear(char *s) {
+  *s = '\\0';
+}
+int main(void) {
+  char *s = "Hello";
+  clear(s);
+  printf("[%s]\\n", s);
+}</code></pre>
+<p><b>(iv)</b> The same as (iii), except that <code>main</code> defines <code>char s[] = "Hello";</code></p>
+<p><b>(v)</b></p>
+<pre class="code"><code class="language-c">void remove_first(int arr[], int *len) {
+  for (int i = 0; i &lt; *len; ++i) {
+    arr[i] = arr[i + 1];
+  }
+  (*len)--;
+}
+int main(void) {
+  int arr[5] = {0, 1, 2, 3, 4};
+  int len = 5;
+  remove_first(arr, &amp;len);
+}</code></pre>
+<p><b>(vi)</b></p>
+<pre class="code"><code class="language-c">int main(void) {
+  int x = 5;
+  int *p = x;
+  printf("%d\\n", *p);
+}</code></pre>`,
+  s:`<ol type="i">
+<li><b>Runs; prints <code>72</code>.</b> A <code>char *</code> may be passed where a <code>const char *</code> is expected: adding <code>const</code> only <em>removes</em> permissions, so it is always safe. <code>*s</code> is <code>'H'</code>, printed with <code>%d</code> as its ASCII code 72.</li>
+<li><b>Compile-time error.</b> Passing a <code>const char *</code> to a <code>char *</code> parameter "discards qualifiers": the compiler rejects it even though <code>first</code> never writes through <code>s</code>, because the type of the parameter <em>promises</em> nothing. (This is why every read-only pointer or array parameter you write must say <code>const</code>: otherwise callers holding <code>const</code> data cannot call you.)</li>
+<li><b>Compiles, then a run-time error.</b> <code>s</code> points at the string literal <code>"Hello"</code>, which lives in read-only data; nothing stops the compile because <code>s</code> was not declared <code>const</code>, but writing <code>'\\0'</code> there crashes (a segmentation fault; the course's checker reports a write to read-only memory). Nothing is printed.</li>
+<li><b>Runs; prints <code>[]</code>.</b> <code>char s[] = "Hello"</code> copies the literal into a 6-byte array in <code>main</code>'s frame, which is writable. <code>clear</code> puts the terminator in position 0, so <code>%s</code> prints an empty string between the brackets.</li>
+<li><b>Compiles, then a run-time error</b> (the course environment reports a stack buffer overflow; in plain C it is undefined behaviour that may silently read garbage). When <code>i</code> is 4 the loop reads <code>arr[5]</code>, one past the end, because <code>*len</code> is still 5. Decrement first, or loop while <code>i &lt; *len - 1</code>.</li>
+<li><b>Compile-time error.</b> <code>int *p = x;</code> tries to store an <code>int</code> in a pointer (an incompatible integer-to-pointer conversion, an error in the course environment). The address is <code>&amp;x</code>.</li>
+</ol>
+<p>Half a mark for the classification and half for the reason in each part. <b>The pattern to remember:</b> type and qualifier mismatches are caught at <em>compile</em> time; writing to read-only data, reading or writing past the end of an array, and dereferencing <code>NULL</code> compile cleanly and fail at <em>run</em> time; <code>char *</code> to <code>const char *</code> is fine, the reverse is not.</p>`},
+
+ {t:`Question 10 · 5 marks · Why an array parameter cannot be moved`,
+  q:`<pre class="code"><code class="language-c">// remove_first(arr, len) removes the first element of arr, so that
+//   e.g. {0, 1, 2, 3, 4} with *len == 5 becomes {1, 2, 3, 4} with *len == 4
+void remove_first(int arr[], int *len) {
+  (*len)--;
+  arr += 1;
+}
+
+int main(void) {
+  int arr[5] = {0, 1, 2, 3, 4};
+  int len = 5;
+  remove_first(arr, &amp;len);
+  trace_int(len);              // TRACE 1: the value of len
+  trace_array_int(arr, len);   // TRACE 2: the first len elements of arr
+}</code></pre>
+<p><b>(a) 2 marks</b> What do the two traces show, and does <code>remove_first</code> behave as its documentation promises? Explain using the memory model.</p>
+<p><b>(b) 2 marks</b> Write a correct <code>remove_first</code>. You may leave anything you like in the array after the first <code>*len</code> elements.</p>
+<p><b>(c) 1 mark</b> A classmate writes the loop in (b) backwards: <code>for (int i = *len - 1; i &gt;= 0; i--) { arr[i] = arr[i + 1]; }</code> after the decrement. What do the traces show now?</p>`,
+  s:`<p><b>(a)</b> TRACE 1 shows <code>len</code> is <b>4</b>; TRACE 2 shows <b>{0, 1, 2, 3}</b>. The function does <em>not</em> work: the array still starts with 0. Inside <code>remove_first</code> the parameter <code>arr</code> is a <code>pointer</code> holding a <em>copy</em> of the array's address (pass by value applies to the address itself). <code>arr += 1</code> moves that local copy to point at element 1, and the copy disappears when the frame is popped; <code>main</code>'s array and <code>main</code>'s <code>arr</code> are untouched. Only <code>len</code> changed, because it was mutated <em>through</em> a pointer with <code>(*len)--</code>. A function can change the caller's array <em>elements</em> through the pointer, but never where the caller's array <em>starts</em>.</p>
+<p><b>(b)</b></p>
+<pre class="code"><code class="language-c">// remove_first(arr, len) removes the first element of arr by shifting the
+//   remaining elements down one position and decrementing *len
+// requires: *len &gt;= 1
+//           arr has at least *len elements [not asserted]
+// effects: modifies arr and *len
+void remove_first(int arr[], int *len) {
+  assert(len != NULL);
+  assert(*len &gt;= 1);
+  (*len)--;
+  for (int i = 0; i &lt; *len; ++i) {
+    arr[i] = arr[i + 1];
+  }
+}</code></pre>
+<p>Decrement first so that <code>i</code> runs from 0 to the <em>new</em> length minus 1 (0 to 3) and the last read is <code>arr[4]</code>, the old final element. Looping before the decrement reads <code>arr[5]</code>: see Question 9 (v).</p>
+<p><b>(c)</b> <code>len</code> is still 4, but the array becomes <b>{4, 4, 4, 4}</b>. Going backwards, <code>arr[3] = arr[4]</code> writes 4 into position 3, then <code>arr[2] = arr[3]</code> copies that 4, and so on: every element reads a value that was already overwritten. Shifting elements <em>left</em> must run left to right; shifting <em>right</em> (making room to insert) must run right to left. Always read an element before the loop overwrites it.</p>
+<p><b>Marking:</b> (a) both trace values (1) and the copied-address explanation (1); (b) decrement before the loop with the shift <code>arr[i] = arr[i + 1]</code> and correct bounds (2); (c) <code>{4, 4, 4, 4}</code> (1).</p>`},
+
+ {t:`Question 11 · 3 marks · The five const forms`,
+  q:`Given <code>int v = 3;</code>, each line below compiles. For each, say what is constant: the pointer, the value it points at, both, or neither. Then answer the two questions.
+<pre class="code"><code class="language-c">int *a = &amp;v;
+const int *b = &amp;v;
+int const *c = &amp;v;
+int * const d = &amp;v;
+int const * const e = &amp;v;</code></pre>
+<p><b>(i)</b> Which form must a function use for an array parameter it only reads, and why does the exam insist on it? <b>(ii)</b> After these definitions, can <code>v</code> still be changed? Through which names?</p>`,
+  s:`<div class="tbl-wrap"><table>
+<tr><th>Definition</th><th>Pointer re-pointable?</th><th>Target writable through it?</th><th>Read it as</th></tr>
+<tr><td><code>int *a</code></td><td>yes</td><td>yes</td><td>a is a pointer to an int</td></tr>
+<tr><td><code>const int *b</code></td><td>yes</td><td><b>no</b></td><td>b is a pointer to a const int</td></tr>
+<tr><td><code>int const *c</code></td><td>yes</td><td><b>no</b></td><td>same as b: <code>const</code> before or after <code>int</code> both qualify the int</td></tr>
+<tr><td><code>int * const d</code></td><td><b>no</b></td><td>yes</td><td>d is a const pointer to an int (how an array name behaves)</td></tr>
+<tr><td><code>int const * const e</code></td><td><b>no</b></td><td><b>no</b></td><td>e is a const pointer to a const int</td></tr>
+</table></div>
+<p>Rule: read the declaration right to left; <code>const</code> applies to whatever is immediately to its left (or, when it is first, to the type on its right). The <code>const</code> that sits next to the <code>*</code> on its right side locks the <em>pointer</em>.</p>
+<p><b>(i)</b> <code>const int a[]</code> (equivalently <code>const int *a</code>), the <code>b</code>/<code>c</code> form: the function may still walk the pointer but cannot change the caller's elements. The exam instructions say you <b>must</b> use <code>const</code> when appropriate: it documents that the function has no mutation side effect, lets the compiler catch an accidental write, and allows callers that hold <code>const</code> data to call the function at all (Question 9 (ii)).</p>
+<p><b>(ii)</b> Yes. <code>const</code> on a pointer restricts what can be done <em>through that pointer</em>; it does not make the target constant. <code>v = 9;</code>, <code>*a = 9;</code> and <code>*d = 9;</code> all still work, while <code>*b = 9;</code>, <code>*c = 9;</code> and <code>*e = 9;</code> are compile errors, and <code>d = &amp;w;</code> or <code>e = &amp;w;</code> are compile errors too.</p>
+<p><b>Marking:</b> rows a, b, c (1), rows d, e (1), (i) and (ii) (1).</p>`}
+);
+
+MIDTERMS.key22=[
+ {t:`2022 Q1 · 2 points · min4 without recursion`,
+  q:`Complete <code>int min4(int a, int b, int c, int d)</code>, the smallest of four, no recursion.`,
+  s:`Same as Midterm C Question 1: a running minimum with three independent <code>if</code>s, or <code>min2(min2(a, b), min2(c, d))</code> with a documented helper.`},
+
+ {t:`2022 Q2 · 8 points · Explain two of three concepts, two points each`,
+  q:`(a) opaque structure · extern · static typing &nbsp; (b) fixed-length array · re-usability · pass by value.`,
+  s:`<p><b>Not on your midterm:</b> <em>opaque structure</em> and <em>extern</em> belong to Section 6 (modules), which you were not given. For completeness: an <b>opaque structure</b> is a <code>struct</code> whose fields are declared only in the module's <code>.c</code> file while the header shows just <code>struct name;</code>, so clients can hold pointers to it but cannot read or change fields; it hides the implementation and lets it change without breaking clients. <b><code>extern</code></b> in a header declares a variable (or function) that is <em>defined</em> in another file, giving its type without creating it, so clients can refer to a module's global constant.</p>
+<p><b>On your midterm:</b> static typing, pass by value, fixed-length array and re-usability are answered in Midterm C Question 2. Two distinct points each; point form.</p>`},
+
+ {t:`2022 Q3 · 6 points · zigzag(width, height, z)`,
+  q:`Draw the zig-zag rectangle; <code>width &gt;= 2</code>, <code>height &gt;= width</code>; include documentation.`,
+  s:`Identical to Midterm C Question 3 (the 17-row example there is the paper's own: columns 0 1 2 3 2 1 0 1 2 3 2 1 0 1 2 3 2). Solution: a column variable and a direction variable, flipped after printing a row whenever the column is 0 or <code>width - 1</code>; requires both bounds; <code>effects: produces output</code>.`},
+
+ {t:`2022 Q4 · 10 points · bbox I/O testing client`,
+  q:`(a) your own thorough <code>.in</code>/<code>.expect</code>; (b) the client, with all <code>#include</code>s. The paper's <code>bbox</code> is a <b>module</b> with hidden state (Section 6), so its functions take no <code>struct bbox</code>; everything else is as in Midterm C Question 4.`,
+  s:`<p><b>(a)</b> Use the nine-line test from Midterm C Question 4: single-point box, growth in two directions, inside point, edge point, negative coordinate, duplicate, reset, reset when empty, first point after a reset.</p>
+<p><b>(b)</b></p>
+<pre class="code"><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;stdbool.h&gt;
+#include "bbox.h"
+
+int main(void) {
+  bbox_reset();
+  struct point p = {0, 0};
+  while (scanf("%d", &amp;p.x) == 1 &amp;&amp; scanf("%d", &amp;p.y) == 1) {
+    if (p.x == 0 &amp;&amp; p.y == 0) {
+      bbox_reset();
+      printf("reset\\n");
+    } else if (bbox_add_point(&amp;p)) {
+      struct point bl = {0, 0};
+      struct point ur = {0, 0};
+      bbox_get_box(&amp;bl, &amp;ur);
+      printf("(%d,%d)-(%d,%d)\\n", bl.x, bl.y, ur.x, ur.y);
+    } else {
+      printf("n/c\\n");
+    }
+  }
+}</code></pre>
+<p><code>bbox_add_point</code> takes <code>const struct point *</code>, so pass <code>&amp;p</code>; <code>bbox_get_box</code> requires at least one point, which holds whenever <code>bbox_add_point</code> just returned true. The module header <code>"bbox.h"</code> counts as a necessary include on the paper; <code>stdbool.h</code> is needed for the <code>bool</code> result, <code>stdio.h</code> for I/O.</p>`},
+
+ {t:`2022 Q5 · 3 points · print_factors(k) with INT_MAX`,
+  q:`Print every positive <code>int</code> divisible by <code>k</code>, one per line, no overflow, all includes.`,
+  s:`Identical to Midterm C Question 5: print <code>k</code>, then <code>while (m &lt;= INT_MAX - k) { m += k; printf("%d\\n", m); }</code>, with <code>stdio.h</code>, <code>limits.h</code> (and <code>assert.h</code> if asserting <code>k &gt; 0</code>).`},
+
+ {t:`2022 Q6 · 8 points · in_range and friends`,
+  q:`(a) <code>in_range(lo, n, hi)</code>; (b) valid int?; (c) uppercase char?; (d) <code>is_valid_3_digit</code>; (e) non-recursive <code>is_valid_n_digit(k, n)</code>, <code>n &lt; 10</code>.`,
+  s:`Identical to Midterm C Question 6: <code>lo &lt;= n &amp;&amp; n &lt;= hi</code>; <code>in_range(INT_MIN, n, INT_MAX)</code> is always true so it cannot detect anything; <code>in_range('A', c, 'Z')</code>; <code>in_range(100, k, 999)</code>; build <code>lo</code> = 10<sup>n-1</sup> with a loop and return <code>in_range(lo, k, lo * 10 - 1)</code>.`},
+
+ {t:`2022 Q7 · 6 points · Memory diagram when line 8 is reached`,
+  q:`Globals <code>int aa = 3; const int bb = 8;</code>; <code>f(int *cc, int dd, int *ee)</code> computes <code>const int hh = aa + bb + *cc + dd + *ee;</code>; <code>g(int *kk, int *mm)</code> does <code>*kk += *mm; kk = mm; ++aa; return f(kk, *mm, &amp;aa);</code>; <code>main</code> has <code>int i = 5; int j = g(&amp;aa, &amp;i);</code> on lines 20 and 21 and prints <code>j</code>.`,
+  s:`<p><b>Working.</b> <code>g(&amp;aa, &amp;i)</code>: <code>kk</code> points at the global <code>aa</code>, <code>mm</code> at <code>i</code>. <code>*kk += *mm</code> makes <code>aa</code> 3 + 5 = 8. <code>kk = mm</code> re-points <code>kk</code> at <code>i</code>. <code>++aa</code> makes <code>aa</code> 9. <code>f(kk, *mm, &amp;aa)</code>: <code>cc</code> = address of <code>i</code>, <code>dd</code> = 5, <code>ee</code> = address of <code>aa</code>. <code>hh = 9 + 8 + 5 + 5 + 9 = 36</code>.</p>
+<pre class="mem">READ-ONLY DATA:
+  bb: 8
+
+GLOBAL DATA:
+  aa: 9 [addr_2]
+
+STACK:
+=========================
+f:
+  cc: addr_1
+  dd: 5
+  ee: addr_2
+  hh: 36
+  return address: g:16
+=========================
+g:
+  kk: addr_1
+  mm: addr_1
+  return address: main:21
+=========================
+main:
+  i: 5 [addr_1]
+  j: ???
+  return address: OS
+=========================</pre>
+<p>The paper asks for box-and-pointer arrows: draw <code>cc</code>, <code>kk</code> and <code>mm</code> all pointing at <code>i</code>'s box and <code>ee</code> pointing at <code>aa</code>'s box. The program prints <code>36</code>. Same traps as Midterm C Question 8: the re-pointed <code>kk</code>, the global changed twice, <code>hh</code> in the frame, <code>j</code> still <code>???</code>.</p>`},
+
+ {t:`2022 Q8 · 7 points · find_min with pointer notation, then selection sort descending`,
+  q:`(a) <code>int *find_min(int *a, int len)</code> returning a pointer to a smallest element, <b>no square brackets and no int variables</b>; (b) <code>void selection_sort_descending(int a[], int len)</code> that must use <code>find_min</code> to select, then swap the smallest to the end of the unsorted region.`,
+  s:`<p><b>(a)</b></p>
+<pre class="code"><code class="language-c">int *find_min(int *a, int len) {
+  int *min = a;
+  for (int *p = a + 1; p &lt; a + len; ++p) {
+    if (*p &lt; *min) {
+      min = p;
+    }
+  }
+  return min;
+}</code></pre>
+<p>Only pointer variables: <code>min</code> remembers <em>where</em> the smallest is, <code>p</code> walks from the second element to one past the end (<code>a + len</code> may be computed and compared, never dereferenced). The parameter cannot be <code>const int *</code> because the function returns a non-<code>const</code> pointer into the array that the sort will write through. "At least one element" is guaranteed by the paper's instructions, so <code>a</code> is a valid starting minimum.</p>
+<p><b>(b)</b></p>
+<pre class="code"><code class="language-c">void selection_sort_descending(int a[], int len) {
+  for (int end = len - 1; end &gt; 0; --end) {
+    int *min = find_min(a, end + 1);
+    int temp = *min;
+    *min = a[end];
+    a[end] = temp;
+  }
+}</code></pre>
+<p>The unsorted region is <code>a[0 .. end]</code> (length <code>end + 1</code>); the smallest of it is swapped into position <code>end</code>, which then joins the sorted tail of small values on the right, so the array ends up largest first. Check with {3, 1, 2}: <code>end = 2</code> finds 1 and swaps it with 2 to give {3, 2, 1}; <code>end = 1</code> finds 2 already at position 1 (a swap with itself is harmless); done. With {1, 2, 3}: {3, 2, 1} after the first pass, then no change.</p>
+<p><b>Where marks are lost:</b> an <code>int i</code> or <code>a[i]</code> in (a); returning <code>*min</code> (a value) instead of <code>min</code>; in (b), calling <code>find_min(a, len)</code> every pass instead of shrinking the region; swapping with <code>min = &amp;a[end]</code> (re-pointing, no data moves); sorting ascending.</p>`}
+];
+
 
 /* ---------- build quizzes + practice into the DOM ---------- */
 function buildAll(){
@@ -6923,7 +7780,7 @@ function buildAll(){
     }
   });
   // midterm (no scoring)
-  ['mid1','mid2'].forEach(m=>{
+  ['mid1','mid2','mid3','key22'].forEach(m=>{
     const pc=document.getElementById('prac-'+m);
     if(!pc||!MIDTERMS[m])return;
     MIDTERMS[m].forEach((item,pi)=>{
